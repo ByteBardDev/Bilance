@@ -10,17 +10,21 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -31,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -69,17 +74,16 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun BilanceApp() {
     var currentScreen by remember { mutableStateOf("splash") }
+    var currentTab by remember { mutableStateOf("home") }
     val context = LocalContext.current
     val database = remember { BilanceDatabase.getDatabase(context) }
     
     LaunchedEffect(Unit) {
         // Initialize demo user
         DatabaseUtils.createDemoUser(database)
-        
         delay(3000) // Show splash for 3 seconds
         currentScreen = "launch"
     }
-    
     when (currentScreen) {
         "splash" -> SplashScreen()
         "launch" -> LaunchScreen(
@@ -87,16 +91,70 @@ fun BilanceApp() {
             onSignUpClick = { currentScreen = "signup" }
         )
         "login" -> LoginScreen(
-            onLoginSuccess = { currentScreen = "home" }, // TODO: Navigate to home
+            onLoginSuccess = { currentScreen = "main" },
             onSignUpClick = { currentScreen = "signup" }
         )
         "signup" -> SignUpScreen(
-            onSignUpSuccess = { currentScreen = "home" },
+            onSignUpSuccess = { currentScreen = "main" },
             onLoginClick = { currentScreen = "login" }
         )
-        "home" -> {
-            // TODO: Add HomeScreen
-            Text("Welcome to Bilance!", modifier = Modifier.fillMaxSize())
+        "main" -> MainNavApp(currentTab = currentTab, onTabSelected = { currentTab = it })
+    }
+}
+
+@Composable
+fun MainNavApp(currentTab: String, onTabSelected: (String) -> Unit) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.weight(1f)) {
+                when (currentTab) {
+                    "home" -> HomeScreen()
+                    "transaction" -> TransactionScreen()
+                }
+            }
+            BottomNavBar(currentTab = currentTab, onTabSelected = onTabSelected)
+        }
+    }
+}
+
+@Composable
+fun HomeScreen() {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("Welcome to Bilance!", modifier = Modifier.padding(bottom = 16.dp))
+        // Add more home content here
+    }
+}
+
+@Composable
+fun BottomNavBar(currentTab: String, onTabSelected: (String) -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(80.dp)
+            .clip(RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp))
+            .background(Color(0xFFF1FFF3))
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "🏠",
+                fontSize = 28.sp,
+                modifier = Modifier.clickable { onTabSelected("home") },
+                color = if (currentTab == "home") SplashBackgroundBlue else LaunchTextDark
+            )
+            Text(
+                "⇄",
+                fontSize = 28.sp,
+                modifier = Modifier.clickable { onTabSelected("transaction") },
+                color = if (currentTab == "transaction") SplashBackgroundBlue else LaunchTextDark
+            )
         }
     }
 }
@@ -251,6 +309,14 @@ fun SplashScreenPreview() {
 
 @Preview(showBackground = true)
 @Composable
+fun TransactionPreview() {
+    BilanceTheme {
+        TransactionScreen()
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
 fun LaunchScreenPreview() {
     BilanceTheme {
         LaunchScreen()
@@ -262,6 +328,14 @@ fun LaunchScreenPreview() {
 fun BilanceAppPreview() {
     BilanceTheme {
         BilanceApp()
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun LoginPreview() {
+    BilanceTheme {
+        LoginScreen()
     }
 }
 
