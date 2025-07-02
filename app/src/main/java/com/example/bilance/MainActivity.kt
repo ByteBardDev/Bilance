@@ -1,12 +1,24 @@
+// File: MainActivity.kt
 package com.example.bilance
-
+import com.example.bilance.model.TransactionSMS
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
+import androidx.navigation.NavController
+import android.provider.Telephony
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,24 +57,27 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bilance.data.BilanceDatabase
 import com.example.bilance.data.DatabaseUtils
-import com.example.bilance.ui.theme.BilanceTheme
-import com.example.bilance.ui.theme.LaunchBackgroundLight
-import com.example.bilance.ui.theme.LaunchButtonBlue
-import com.example.bilance.ui.theme.LaunchButtonLight
-import com.example.bilance.ui.theme.LaunchLinkText
-import com.example.bilance.ui.theme.LaunchTextBlue
-import com.example.bilance.ui.theme.LaunchTextDark
-import com.example.bilance.ui.theme.LaunchTextLight
-import com.example.bilance.ui.theme.SplashBackgroundBlue
-import com.example.bilance.ui.theme.SplashOverlayBlack
+import com.example.bilance.NotificationScreen
+import com.example.bilance.ui.theme.*
+import com.example.bilance.viewmodel.TransactionViewModel
+import com.example.bilance.viewmodel.TransactionViewModelFactory
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Request SMS permission
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_SMS), 1)
+        }
+
         setContent {
             BilanceTheme {
                 BilanceApp()
@@ -77,10 +92,47 @@ fun BilanceApp() {
     var currentTab by remember { mutableStateOf("home") }
     val context = LocalContext.current
     val database = remember { BilanceDatabase.getDatabase(context) }
-    
+    val navController = rememberNavController()
+
     LaunchedEffect(Unit) {
-        // Initialize demo user
         DatabaseUtils.createDemoUser(database)
+    }
+
+    NavHost(navController = navController, startDestination = "splash") {
+        composable("splash") {
+            SplashScreen(navController = navController)
+        }
+        composable("launch") {
+            LaunchScreen(
+                onLoginClick = { navController.navigate("login") },
+                onSignUpClick = { navController.navigate("signup") }
+            )
+        }
+        composable("login") {
+            LoginScreen(
+                onLoginSuccess = { navController.navigate("notifications") },
+                onSignUpClick = { navController.navigate("signup") }
+            )
+        }
+        composable("signup") {
+            SignUpScreen(
+                onSignUpSuccess = { navController.navigate("notifications") },
+                onLoginClick = { navController.navigate("login") }
+            )
+        }
+        composable("notifications") {
+            val factory = remember { TransactionViewModelFactory(context.contentResolver) }
+            val viewModel: TransactionViewModel = viewModel(factory = factory)
+            NotificationScreen(
+                viewModel = viewModel,
+                navController = navController
+            )
+        }
+        composable("transactionDetail/{smsId}") { backStackEntry ->
+            val smsId = backStackEntry.arguments?.getString("smsId")?.toIntOrNull() ?: return@composable
+            val factory = remember { TransactionViewModelFactory(context.contentResolver) }
+            val viewModel: TransactionViewModel = viewModel(factory = factory)
+            TransactionDetailsScreen(smsId = smsId, viewModel = viewModel, navController = navController)
         delay(3000) // Show splash for 3 seconds
         currentScreen = "launch"
     }
@@ -159,14 +211,20 @@ fun BottomNavBar(currentTab: String, onTabSelected: (String) -> Unit) {
     }
 }
 
+
 @Composable
-fun SplashScreen() {
+fun SplashScreen(navController: NavController) {
+    LaunchedEffect(Unit) {
+        delay(3000)
+        navController.navigate("launch") {
+            popUpTo("splash") { inclusive = true }
+        }
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(SplashBackgroundBlue)
     ) {
-        // Apply overlay effects as mentioned in Figma design
         repeat(3) {
             Box(
                 modifier = Modifier
@@ -174,9 +232,6 @@ fun SplashScreen() {
                     .background(SplashOverlayBlack)
             )
         }
-        // Logo positioned based on Figma coordinates
-        // Original: x=38, y=307, width=335.765625, height=174
-        // Converting to dp approximations for responsive design
         Box(
             modifier = Modifier
                 .width(336.dp)
@@ -203,8 +258,6 @@ fun LaunchScreen(
             .fillMaxSize()
             .background(LaunchBackgroundLight)
     ) {
-        // Logo positioned based on Figma coordinates
-        // Original: x=38, y=307, width=335, height=174
         Box(
             modifier = Modifier
                 .width(335.dp)
@@ -218,9 +271,7 @@ fun LaunchScreen(
                 modifier = Modifier.fillMaxSize()
             )
         }
-        
-        // Tagline text positioned based on Figma coordinates
-        // Original: x=82, y=481, width=268, height=13
+
         Text(
             text = "One App. All Your Transactions. Zero Noise.",
             color = LaunchTextDark,
@@ -231,9 +282,7 @@ fun LaunchScreen(
                 .width(268.dp)
                 .offset(x = 82.dp, y = 481.dp)
         )
-        
-        // Primary Login Button positioned based on Figma coordinates
-        // Original: x=112, y=530, width=207, height=45
+
         Button(
             onClick = onLoginClick,
             colors = ButtonDefaults.buttonColors(
@@ -252,9 +301,7 @@ fun LaunchScreen(
                 fontWeight = FontWeight.Medium
             )
         }
-        
-        // Secondary Sign Up Button positioned based on Figma coordinates
-        // Original: x=112, y=587, width=207, height=45
+
         OutlinedButton(
             onClick = onSignUpClick,
             colors = ButtonDefaults.outlinedButtonColors(
@@ -273,9 +320,7 @@ fun LaunchScreen(
                 fontWeight = FontWeight.Medium
             )
         }
-        
-        // Forgot Password link positioned based on Figma coordinates
-        // Original: x=152, y=644, width=127, height=13
+
         Text(
             text = "Forgot Password?",
             color = LaunchLinkText,
@@ -286,7 +331,7 @@ fun LaunchScreen(
             modifier = Modifier
                 .width(127.dp)
                 .offset(x = 152.dp, y = 644.dp)
-                .clickable { /* TODO: Handle forgot password */ }
+                .clickable { }
         )
     }
 }
@@ -302,8 +347,9 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
 @Preview(showBackground = true)
 @Composable
 fun SplashScreenPreview() {
+    val navController = rememberNavController()
     BilanceTheme {
-        SplashScreen()
+        SplashScreen(navController = navController)
     }
 }
 
@@ -346,4 +392,3 @@ fun GreetingPreview() {
         Greeting("Android")
     }
 }
-
