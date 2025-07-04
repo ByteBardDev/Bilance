@@ -103,15 +103,18 @@ fun BilanceApp() {
         }
         composable("login") {
             LoginScreen(
-                onLoginSuccess = { navController.navigate("notifications") },
+                onLoginSuccess = { navController.navigate("home") },
                 onSignUpClick = { navController.navigate("signup") }
             )
         }
         composable("signup") {
             SignUpScreen(
-                onSignUpSuccess = { navController.navigate("notifications") },
+                onSignUpSuccess = { navController.navigate("home") },
                 onLoginClick = { navController.navigate("login") }
             )
+        }
+        composable("home") {
+            MainNavApp(navController = navController)
         }
         composable("notifications") {
             val factory = remember { TransactionViewModelFactory(context.contentResolver) }
@@ -131,32 +134,57 @@ fun BilanceApp() {
 }
 
 @Composable
-fun MainNavApp(currentTab: String, onTabSelected: (String) -> Unit) {
+fun MainNavApp(navController: NavController) {
+    var currentTab by remember { mutableStateOf("home") }
+    
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.weight(1f)) {
                 when (currentTab) {
                     "home" -> HomeScreen()
                     "analytics" -> AnalyticsScreen()
-                    "transaction" -> TransactionScreen()
+                    "transaction" -> TransactionScreen(navController = navController)
                     "categories" -> CategoriesScreen()
                     "profile" -> ProfileScreen()
                 }
             }
-            BottomNavBar(currentTab = currentTab, onTabSelected = onTabSelected)
+            BottomNavBar(currentTab = currentTab, onTabSelected = { currentTab = it })
         }
     }
 }
 
 @Composable
 fun HomeScreen() {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text("Welcome to Bilance!", modifier = Modifier.padding(bottom = 16.dp))
-        // Add more home content here
+    // This is now the greeting screen content
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Main content area
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .background(Color(0xFFF8F9FA))
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "Welcome to Bilance!",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = Color(0xFF283A5F),
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                    Text(
+                        text = "Your personal finance manager",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -206,6 +234,18 @@ fun CategoriesScreen() {
             modifier = Modifier.padding(top = 8.dp)
         )
     }
+}
+
+@Composable
+fun NotificationsTabScreen(navController: NavController) {
+    val context = LocalContext.current
+    val factory = remember { TransactionViewModelFactory(context.contentResolver) }
+    val viewModel: TransactionViewModel = viewModel(factory = factory)
+    
+    NotificationScreen(
+        viewModel = viewModel,
+        navController = navController
+    )
 }
 
 @Composable
@@ -260,14 +300,14 @@ fun BottomNavBar(currentTab: String, onTabSelected: (String) -> Unit) {
                 onClick = { onTabSelected("analytics") }
             )
             
-            // Transaction Icon (arrows)
+            // Transaction Icon (arrows) - Middle position
             NavBarItem(
                 icon = Icons.Default.SwapHoriz,
                 isSelected = currentTab == "transaction",
                 onClick = { onTabSelected("transaction") }
             )
             
-            // Layers/Categories Icon
+            // Categories Icon - 4th position
             NavBarItem(
                 icon = Icons.Default.Layers,
                 isSelected = currentTab == "categories",
@@ -455,8 +495,9 @@ fun SplashScreenPreview() {
 @Preview(showBackground = true)
 @Composable
 fun TransactionPreview() {
+    val navController = rememberNavController()
     BilanceTheme {
-        TransactionScreen()
+        TransactionScreen(navController = navController)
     }
 }
 
@@ -487,40 +528,8 @@ fun LoginPreview() {
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
-    var currentTab by remember { mutableStateOf("home") }
-    
+    val navController = rememberNavController()
     BilanceTheme {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                // Main content area
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .background(Color(0xFFF8F9FA))
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Greeting("Android")
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "Current tab: $currentTab",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.Gray
-                        )
-                    }
-                }
-                
-                // Bottom Navigation Bar
-                BottomNavBar(
-                    currentTab = currentTab,
-                    onTabSelected = { currentTab = it }
-                )
-            }
-        }
+        MainNavApp(navController = navController)
     }
 }
