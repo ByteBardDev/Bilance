@@ -1,6 +1,5 @@
 // File: MainActivity.kt
 package com.example.bilance
-import com.example.bilance.model.TransactionSMS
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -12,18 +11,16 @@ import androidx.navigation.compose.rememberNavController
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.navigation.NavController
-import android.provider.Telephony
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,9 +28,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
@@ -47,7 +42,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -62,7 +56,6 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bilance.data.BilanceDatabase
 import com.example.bilance.data.DatabaseUtils
-import com.example.bilance.NotificationScreen
 import com.example.bilance.ui.theme.*
 import com.example.bilance.viewmodel.TransactionViewModel
 import com.example.bilance.viewmodel.TransactionViewModelFactory
@@ -133,24 +126,7 @@ fun BilanceApp() {
             val factory = remember { TransactionViewModelFactory(context.contentResolver) }
             val viewModel: TransactionViewModel = viewModel(factory = factory)
             TransactionDetailsScreen(smsId = smsId, viewModel = viewModel, navController = navController)
-        delay(3000) // Show splash for 3 seconds
-        currentScreen = "launch"
-    }
-    when (currentScreen) {
-        "splash" -> SplashScreen()
-        "launch" -> LaunchScreen(
-            onLoginClick = { currentScreen = "login" },
-            onSignUpClick = { currentScreen = "signup" }
-        )
-        "login" -> LoginScreen(
-            onLoginSuccess = { currentScreen = "main" },
-            onSignUpClick = { currentScreen = "signup" }
-        )
-        "signup" -> SignUpScreen(
-            onSignUpSuccess = { currentScreen = "main" },
-            onLoginClick = { currentScreen = "login" }
-        )
-        "main" -> MainNavApp(currentTab = currentTab, onTabSelected = { currentTab = it })
+        }
     }
 }
 
@@ -161,7 +137,10 @@ fun MainNavApp(currentTab: String, onTabSelected: (String) -> Unit) {
             Box(modifier = Modifier.weight(1f)) {
                 when (currentTab) {
                     "home" -> HomeScreen()
+                    "analytics" -> AnalyticsScreen()
                     "transaction" -> TransactionScreen()
+                    "categories" -> CategoriesScreen()
+                    "profile" -> ProfileScreen()
                 }
             }
             BottomNavBar(currentTab = currentTab, onTabSelected = onTabSelected)
@@ -182,32 +161,152 @@ fun HomeScreen() {
 }
 
 @Composable
+fun AnalyticsScreen() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF8F9FA))
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            "Analytics Screen",
+            style = MaterialTheme.typography.headlineMedium,
+            color = Color(0xFF283A5F)
+        )
+        Text(
+            "View your spending analytics here",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.Gray,
+            modifier = Modifier.padding(top = 8.dp)
+        )
+    }
+}
+
+@Composable
+fun CategoriesScreen() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF8F9FA))
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            "Categories Screen",
+            style = MaterialTheme.typography.headlineMedium,
+            color = Color(0xFF283A5F)
+        )
+        Text(
+            "Manage your expense categories here",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.Gray,
+            modifier = Modifier.padding(top = 8.dp)
+        )
+    }
+}
+
+@Composable
+fun ProfileScreen() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF8F9FA))
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            "Profile Screen",
+            style = MaterialTheme.typography.headlineMedium,
+            color = Color(0xFF283A5F)
+        )
+        Text(
+            "Manage your profile settings here",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.Gray,
+            modifier = Modifier.padding(top = 8.dp)
+        )
+    }
+}
+
+@Composable
 fun BottomNavBar(currentTab: String, onTabSelected: (String) -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(80.dp)
             .clip(RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp))
-            .background(Color(0xFFF1FFF3))
+            .background(Color(0xFFC8D5E8)) // Light blue-gray background
     ) {
         Row(
             modifier = Modifier.fillMaxSize(),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                "🏠",
-                fontSize = 28.sp,
-                modifier = Modifier.clickable { onTabSelected("home") },
-                color = if (currentTab == "home") SplashBackgroundBlue else LaunchTextDark
+            // Home Icon
+            NavBarItem(
+                icon = Icons.Default.Home,
+                isSelected = currentTab == "home",
+                onClick = { onTabSelected("home") }
             )
-            Text(
-                "⇄",
-                fontSize = 28.sp,
-                modifier = Modifier.clickable { onTabSelected("transaction") },
-                color = if (currentTab == "transaction") SplashBackgroundBlue else LaunchTextDark
+            
+            // Analytics Icon
+            NavBarItem(
+                icon = Icons.Default.Analytics,
+                isSelected = currentTab == "analytics",
+                onClick = { onTabSelected("analytics") }
+            )
+            
+            // Transaction Icon (arrows)
+            NavBarItem(
+                icon = Icons.Default.SwapHoriz,
+                isSelected = currentTab == "transaction",
+                onClick = { onTabSelected("transaction") }
+            )
+            
+            // Layers/Categories Icon
+            NavBarItem(
+                icon = Icons.Default.Layers,
+                isSelected = currentTab == "categories",
+                onClick = { onTabSelected("categories") }
+            )
+            
+            // Profile Icon
+            NavBarItem(
+                icon = Icons.Default.Person,
+                isSelected = currentTab == "profile",
+                onClick = { onTabSelected("profile") }
             )
         }
+    }
+}
+
+@Composable
+fun NavBarItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(
+                if (isSelected) Color(0xFF283A5F) // Dark blue for selected
+                else Color.Transparent
+            )
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = if (isSelected) Color.White else Color(0xFF283A5F),
+            modifier = Modifier.size(24.dp)
+        )
     }
 }
 
@@ -388,7 +487,40 @@ fun LoginPreview() {
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
+    var currentTab by remember { mutableStateOf("home") }
+    
     BilanceTheme {
-        Greeting("Android")
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Main content area
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .background(Color(0xFFF8F9FA))
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Greeting("Android")
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Current tab: $currentTab",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.Gray
+                        )
+                    }
+                }
+                
+                // Bottom Navigation Bar
+                BottomNavBar(
+                    currentTab = currentTab,
+                    onTabSelected = { currentTab = it }
+                )
+            }
+        }
     }
 }
