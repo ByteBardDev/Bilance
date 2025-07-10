@@ -134,26 +134,6 @@ fun BilanceApp() {
 }
 
 @Composable
-fun MainNavApp(navController: NavController) {
-    var currentTab by remember { mutableStateOf("home") }
-    
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Box(modifier = Modifier.weight(1f)) {
-                when (currentTab) {
-                    "home" -> HomeScreen()
-                    "analytics" -> AnalyticsScreen()
-                    "transaction" -> TransactionScreen(navController = navController)
-                    "categories" -> CategoriesScreen()
-                    "profile" -> ProfileScreen()
-                }
-            }
-            BottomNavBar(currentTab = currentTab, onTabSelected = { currentTab = it })
-        }
-    }
-}
-
-@Composable
 fun HomeScreen() {
     // This is now the greeting screen content
     Box(modifier = Modifier.fillMaxSize()) {
@@ -246,30 +226,6 @@ fun NotificationsTabScreen(navController: NavController) {
         viewModel = viewModel,
         navController = navController
     )
-}
-
-@Composable
-fun ProfileScreen() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF8F9FA))
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            "Profile Screen",
-            style = MaterialTheme.typography.headlineMedium,
-            color = Color(0xFF283A5F)
-        )
-        Text(
-            "Manage your profile settings here",
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.Gray,
-            modifier = Modifier.padding(top = 8.dp)
-        )
-    }
 }
 
 @Composable
@@ -481,6 +437,26 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
         text = "Hello $name!",
         modifier = modifier
     )
+}
+
+@Composable
+fun MainNavApp(navController: NavController) {
+    var currentTab by remember { mutableStateOf("home") }
+    
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.weight(1f)) {
+                when (currentTab) {
+                    "home" -> HomeScreen()
+                    "analytics" -> AnalyticsScreen()
+                    "transaction" -> TransactionScreen(navController = navController)
+                    "categories" -> CategoriesScreen()
+                    "profile" -> ProfileScreen(navController = navController)
+                }
+            }
+            BottomNavBar(currentTab = currentTab, onTabSelected = { currentTab = it })
+        }
+    }
 }
 
 @Preview(showBackground = true)
