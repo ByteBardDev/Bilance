@@ -3,18 +3,24 @@
 package com.example.bilance
 
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -27,10 +33,7 @@ import java.util.*
 @Composable
 fun NotificationScreen(
     viewModel: TransactionViewModel,
-    navController: NavController,
-    onTransactionClick: (TransactionSMS) -> Unit = { sms ->
-        navController.navigate("transactionDetail/${sms.id}")
-    }
+    navController: NavController
 ) {
     val context = LocalContext.current
     val months = listOf(
@@ -44,7 +47,7 @@ fun NotificationScreen(
     if (showMonthPicker) {
         AlertDialog(
             onDismissRequest = { showMonthPicker = false },
-            title = { Text("Select Month and Year") },
+            title = { Text(text = "Select Month and Year") },
             text = {
                 Column {
                     // Dropdown for year selection
@@ -63,7 +66,7 @@ fun NotificationScreen(
                             val years = (1990..Calendar.getInstance().get(Calendar.YEAR))
                             years.forEach { year ->
                                 DropdownMenuItem(
-                                    text = { Text("$year") },
+                                    text = { Text(text = "$year") },
                                     onClick = {
                                         selectedYear = year
                                         expanded = false
@@ -93,7 +96,7 @@ fun NotificationScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showMonthPicker = false }) {
-                    Text("Close")
+                    Text(text = "Close")
                 }
             }
         )
@@ -101,33 +104,52 @@ fun NotificationScreen(
 
 
     Scaffold(
+        containerColor = Color(0xFFF5F7FA),
         topBar = {
             TopAppBar(
-                title = { Text("Notification", fontSize = 18.sp) },
+                title = {
+                    Text(
+                        "Notification",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
+                    )
+                },
                 navigationIcon = {
-                    IconButton(onClick = { /* Back navigation can go here */ }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = null)
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color.White
+                        )
                     }
                 },
                 actions = {
                     IconButton(onClick = {
                         showMonthPicker = true
                     }) {
-                        Icon(Icons.Default.FilterList, contentDescription = "Filter")
+                        Icon(
+                            Icons.Default.FilterList,
+                            contentDescription = "Filter",
+                            tint = Color.White
+                        )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFF283A5F)
+                )
             )
         }
     ) { padding ->
 
         val grouped = viewModel.notifications
-            .filter {
-                val cal = Calendar.getInstance().apply { time = it.date }
+            .filter { sms ->
+                val cal = Calendar.getInstance().apply { time = sms.date }
                 cal.get(Calendar.MONTH) == selectedMonth && cal.get(Calendar.YEAR) == selectedYear
             }
-            .groupBy {
+            .groupBy { sms ->
                 val now = Calendar.getInstance()
-                val smsDate = Calendar.getInstance().apply { time = it.date }
+                val smsDate = Calendar.getInstance().apply { time = sms.date }
                 when {
                     now.get(Calendar.DAY_OF_YEAR) == smsDate.get(Calendar.DAY_OF_YEAR) -> "Today"
                     now.get(Calendar.DAY_OF_YEAR) - 1 == smsDate.get(Calendar.DAY_OF_YEAR) -> "Yesterday"
@@ -138,18 +160,20 @@ fun NotificationScreen(
         LazyColumn(
             modifier = Modifier
                 .padding(padding)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            grouped.forEach { (section, items) ->
+            grouped.forEach { (section, smsItems) ->
                 item {
                     Text(
                         text = section,
                         fontSize = 16.sp,
-                        color = Color.DarkGray,
-                        modifier = Modifier.padding(vertical = 8.dp)
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF2D3748),
+                        modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp)
                     )
                 }
-                items(items) { sms ->
+                items(smsItems) { sms ->
                     NotificationCard(
                         sms = sms,
                         onAccept = {
@@ -159,7 +183,6 @@ fun NotificationScreen(
                             viewModel.removeSMS(sms)
                             Toast.makeText(context, "Notification removed", Toast.LENGTH_SHORT).show()
                         }
-
                     )
                 }
             }
@@ -169,35 +192,127 @@ fun NotificationScreen(
 
 @Composable
 fun NotificationCard(sms: TransactionSMS, onAccept: () -> Unit, onReject: () -> Unit) {
+    // Determine notification type and icon based on SMS content
+    val (icon, iconColor, notificationType) = when {
+        sms.message.lowercase().contains("transaction") -> Triple(
+            Icons.Default.AttachMoney,
+            Color(0xFF4A90E2),
+            "Transactions"
+        )
+        sms.message.lowercase().contains("reminder") -> Triple(
+            Icons.Default.NotificationImportant,
+            Color(0xFF7B68EE),
+            "Reminder!"
+        )
+        sms.message.lowercase().contains("update") -> Triple(
+            Icons.Default.Update,
+            Color(0xFF50C878),
+            "New Update"
+        )
+        sms.message.lowercase().contains("payment") -> Triple(
+            Icons.Default.Payment,
+            Color(0xFF2D3748),
+            "Payment Record"
+        )
+        else -> Triple(
+            Icons.Default.Notifications,
+            Color(0xFF4A90E2),
+            "Notification"
+        )
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F8F8))
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(12.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = sms.title, fontSize = 14.sp, color = Color.Black)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = sms.message, fontSize = 13.sp)
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = SimpleDateFormat("HH:mm – MMM dd", Locale.getDefault()).format(sms.date),
-                fontSize = 11.sp,
-                color = Color.Gray
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            // Icon with colored background circle
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(iconColor.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconColor,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Content
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = notificationType,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF2D3748)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = if (sms.message.length > 60) sms.message.take(60) + "..." else sms.message,
+                    fontSize = 12.sp,
+                    color = Color(0xFF718096),
+                    lineHeight = 16.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = SimpleDateFormat("HH:mm – MMM dd", Locale.getDefault()).format(sms.date),
+                    fontSize = 11.sp,
+                    color = Color(0xFF9CA3AF)
+                )
+            }
+        }
+
+        // Action buttons (keeping the original functionality)
+        if (sms.message.lowercase().contains("transaction")) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 Button(
                     onClick = onAccept,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFBEE8C0))
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF10B981)
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Text("Accept")
+                    Text(
+                        "Accept",
+                        fontSize = 12.sp,
+                        color = Color.White
+                    )
                 }
                 OutlinedButton(
                     onClick = onReject,
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red)
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Color(0xFFEF4444)
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Text("Reject")
+                    Text(
+                        "Reject",
+                        fontSize = 12.sp
+                    )
                 }
             }
         }
