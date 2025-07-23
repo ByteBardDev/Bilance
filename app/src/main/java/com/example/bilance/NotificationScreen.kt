@@ -182,6 +182,9 @@ fun NotificationScreen(
                         onReject = {
                             viewModel.removeSMS(sms)
                             Toast.makeText(context, "Notification removed", Toast.LENGTH_SHORT).show()
+                        },
+                        onClick = {
+                            navController.navigate("transactionDetail/${sms.id}")
                         }
                     )
                 }
@@ -191,7 +194,7 @@ fun NotificationScreen(
 }
 
 @Composable
-fun NotificationCard(sms: TransactionSMS, onAccept: () -> Unit, onReject: () -> Unit) {
+fun NotificationCard(sms: TransactionSMS, onAccept: () -> Unit, onReject: () -> Unit, onClick: () -> Unit) {
     // Determine notification type and icon based on SMS content
     val (icon, iconColor, notificationType) = when {
         sms.message.lowercase().contains("transaction") -> Triple(
@@ -224,7 +227,8 @@ fun NotificationCard(sms: TransactionSMS, onAccept: () -> Unit, onReject: () -> 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(vertical = 4.dp)
+            .clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(12.dp)
