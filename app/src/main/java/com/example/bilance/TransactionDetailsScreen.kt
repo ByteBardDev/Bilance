@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -31,18 +32,30 @@ fun TransactionDetailsScreen(
     navController: NavController
 ) {
     val context = LocalContext.current
-    val sms = viewModel.notifications.find { it.id == smsId } ?: return
+
+    // Find the SMS by ID, if not found show error and navigate back
+    val sms = viewModel.notifications.find { it.id == smsId }
+    if (sms == null) {
+        LaunchedEffect(Unit) {
+            Toast.makeText(context, "Transaction not found", Toast.LENGTH_SHORT).show()
+            navController.popBackStack()
+        }
+        return
+    }
+
     val lowerMsg = sms.message.lowercase()
     val transactionType = when {
         lowerMsg.contains("debited") || lowerMsg.contains("debit") -> "Expense"
         lowerMsg.contains("credited") || lowerMsg.contains("credit") -> "Income"
         else -> "Expense"
     }
+
     val categoryOptions = if (transactionType == "Income") {
         listOf("Uncategorized", "Salary", "Business Income", "TA/DA", "Interest", "Gift", "Other Income")
     } else {
         listOf("Uncategorized", "Food", "Travel", "Shopping", "Groceries", "Bills", "Others")
     }
+
     var selectedCategory by remember { mutableStateOf(if (sms.category in categoryOptions) sms.category else "Uncategorized") }
     var amount by remember { mutableStateOf(sms.amount) }
     val isIncome = transactionType == "Income"
@@ -53,7 +66,7 @@ fun TransactionDetailsScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Transaction Details",
+                        text = "Transaction Details",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color.White
@@ -62,7 +75,7 @@ fun TransactionDetailsScreen(
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
-                            Icons.Default.ArrowBack,
+                            Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = Color.White
                         )
@@ -111,7 +124,7 @@ fun TransactionDetailsScreen(
                 Button(
                     onClick = {
                         viewModel.updateSMS(sms, selectedCategory, amount)
-                        Toast.makeText(context, "Transaction saved", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Transaction saved successfully", Toast.LENGTH_SHORT).show()
                         navController.popBackStack()
                     },
                     colors = ButtonDefaults.buttonColors(
@@ -123,7 +136,7 @@ fun TransactionDetailsScreen(
                         .height(48.dp)
                 ) {
                     Text(
-                        "Save Transaction",
+                        text = "Save Transaction",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color.White
@@ -132,7 +145,7 @@ fun TransactionDetailsScreen(
                 OutlinedButton(
                     onClick = {
                         viewModel.removeSMS(sms)
-                        Toast.makeText(context, "Transaction deleted", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Transaction deleted successfully", Toast.LENGTH_SHORT).show()
                         navController.popBackStack()
                     },
                     colors = ButtonDefaults.outlinedButtonColors(
@@ -144,7 +157,7 @@ fun TransactionDetailsScreen(
                         .height(48.dp)
                 ) {
                     Text(
-                        "Delete",
+                        text = "Delete",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -285,7 +298,7 @@ fun TransactionDetailsCard(
                 onValueChange = onAmountChange,
                 label = {
                     Text(
-                        "Amount",
+                        text = "Amount",
                         color = Color(0xFF4A5568)
                     )
                 },
@@ -305,7 +318,7 @@ fun TransactionDetailsCard(
                 onValueChange = {},
                 label = {
                     Text(
-                        "Type",
+                        text = "Type",
                         color = Color(0xFF4A5568)
                     )
                 },
@@ -356,7 +369,7 @@ fun TransactionDetailsCard(
                     ) {
                         categoryOptions.forEach { option ->
                             DropdownMenuItem(
-                                text = { Text(option) },
+                                text = { Text(text = option) },
                                 onClick = {
                                     onCategoryChange(option)
                                     expanded = false

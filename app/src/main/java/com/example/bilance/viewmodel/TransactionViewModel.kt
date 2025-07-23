@@ -123,4 +123,18 @@ class TransactionViewModel(
     fun removeSMS(sms: TransactionSMS) {
         notifications.remove(sms)
     }
+
+    fun addTransaction(title: String, amount: String, category: String, type: String) {
+        val newId = (notifications.maxByOrNull { it.id }?.id ?: 0) + 1
+        val sms = TransactionSMS(
+            id = newId,
+            title = title,
+            message = "Manual transaction entry",
+            date = Date(),
+            category = category,
+            amount = amount,
+            type = type
+        )
+        notifications.add(0, sms) // Add to the beginning of the list
+    }
 }

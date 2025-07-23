@@ -130,6 +130,21 @@ fun BilanceApp() {
             val viewModel: TransactionViewModel = viewModel(factory = factory)
             TransactionDetailsScreen(smsId = smsId, viewModel = viewModel, navController = navController)
         }
+        composable("categoryDetail/{categoryName}") { backStackEntry ->
+            val categoryName = backStackEntry.arguments?.getString("categoryName") ?: return@composable
+            val factory = remember { TransactionViewModelFactory(context.contentResolver) }
+            val viewModel: TransactionViewModel = viewModel(factory = factory)
+            CategoryDetailScreen(categoryName = categoryName, viewModel = viewModel, navController = navController)
+        }
+        composable("addExpense/{categoryName}") { backStackEntry ->
+            val categoryName = backStackEntry.arguments?.getString("categoryName") ?: return@composable
+            val factory = remember { TransactionViewModelFactory(context.contentResolver) }
+            val viewModel: TransactionViewModel = viewModel(factory = factory)
+            AddExpenseScreen(categoryName = categoryName, viewModel = viewModel, navController = navController)
+        }
+        composable("addCustomCategory") {
+            AddCustomCategoryScreen(navController = navController)
+        }
     }
 }
 
@@ -192,29 +207,7 @@ fun AnalyticsScreen() {
     }
 }
 
-@Composable
-fun CategoriesScreen() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF8F9FA))
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            "Categories Screen",
-            style = MaterialTheme.typography.headlineMedium,
-            color = Color(0xFF283A5F)
-        )
-        Text(
-            "Manage your expense categories here",
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.Gray,
-            modifier = Modifier.padding(top = 8.dp)
-        )
-    }
-}
+
 
 @Composable
 fun NotificationsTabScreen(navController: NavController) {
@@ -442,6 +435,9 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
 @Composable
 fun MainNavApp(navController: NavController) {
     var currentTab by remember { mutableStateOf("home") }
+    val context = LocalContext.current
+    val factory = remember { TransactionViewModelFactory(context.contentResolver) }
+    val viewModel: TransactionViewModel = viewModel(factory = factory)
     
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -450,7 +446,7 @@ fun MainNavApp(navController: NavController) {
                     "home" -> HomeScreen()
                     "analytics" -> AnalyticsScreen()
                     "transaction" -> TransactionScreen(navController = navController)
-                    "categories" -> CategoriesScreen()
+                    "categories" -> CategoriesScreen(viewModel = viewModel, navController = navController)
                     "profile" -> ProfileScreen(navController = navController)
                 }
             }
