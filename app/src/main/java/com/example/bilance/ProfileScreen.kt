@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,6 +18,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.bilance.data.BilanceDatabase
@@ -24,32 +26,42 @@ import com.example.bilance.data.User
 import com.example.bilance.ui.theme.BilanceTheme
 import kotlinx.coroutines.launch
 
+// Update the ProfileScreen header section to match TransactionScreen style
+
+// In ProfileScreen.kt - Update the ProfileScreen function
 @Composable
-fun ProfileScreen(navController: NavController? = null) {
+fun ProfileScreen(navController: NavController? = null, userEmail: String = "") {
     val context = LocalContext.current
     val database = remember { BilanceDatabase.getDatabase(context) }
     val scope = rememberCoroutineScope()
     var userProfile by remember { mutableStateOf<User?>(null) }
     
-    // Load user profile from database
-    LaunchedEffect(Unit) {
+    // Load user profile from database using the passed email
+    LaunchedEffect(userEmail) {
         scope.launch {
             try {
-                // Get the demo user or any existing user
-                userProfile = database.userDao().getUserByEmail("demo@bilance.com") ?: User(
-                    id = 25030024,
-                    fullName = "John Smith",
-                    email = "john.smith@example.com",
-                    mobileNumber = "+1234567890",
-                    dateOfBirth = "01/01/1990",
-                    password = ""
-                )
+                if (userEmail.isNotEmpty()) {
+                    // Get user by the actual email passed from login/signup
+                    userProfile = database.userDao().getUserByEmail(userEmail)
+                }
+                
+                // Fallback if no user found or email is empty
+                if (userProfile == null) {
+                    userProfile = database.userDao().getUserByEmail("demo@bilance.com") ?: User(
+                        id = 25030024,
+                        fullName = "John Smith",
+                        email = userEmail.ifEmpty { "john.smith@example.com" },
+                        mobileNumber = "+1234567890",
+                        dateOfBirth = "01/01/1990",
+                        password = ""
+                    )
+                }
             } catch (e: Exception) {
                 // Fallback if database access fails
                 userProfile = User(
                     id = 25030024,
                     fullName = "John Smith",
-                    email = "john.smith@example.com",
+                    email = userEmail.ifEmpty { "john.smith@example.com" },
                     mobileNumber = "+1234567890",
                     dateOfBirth = "01/01/1990",
                     password = ""
@@ -65,53 +77,59 @@ fun ProfileScreen(navController: NavController? = null) {
                 .fillMaxSize()
                 .background(Color(0xFF283A5F))
         ) {
-            // Header
+            // Header - matching TransactionScreen style
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(top = 40.dp, start = 16.dp, end = 16.dp, bottom = 20.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Back",
-                    tint = Color.White,
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clickable { 
-                            navController?.popBackStack()
-                        }
-                )
-                
+                IconButton(onClick = { 
+                    navController?.popBackStack()
+                }) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
                 Text(
                     text = "Profile",
-                    style = MaterialTheme.typography.headlineSmall,
                     color = Color.White,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )
-                
-                Icon(
-                    imageVector = Icons.Default.Notifications,
-                    contentDescription = "Notifications",
-                    tint = Color.White,
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clickable { 
-                            navController?.navigate("notifications")
-                        }
-                )
+                IconButton(onClick = { 
+                    navController?.navigate("notifications")
+                }) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color.White.copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Notifications,
+                            contentDescription = "Notifications",
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
             }
             
-            // Space for profile picture 80
-            Spacer(modifier = Modifier.height(40.dp))
+            // Space for profile picture - reduced since header takes more space now
+            Spacer(modifier = Modifier.height(20.dp))
         }
         
         // White card that starts from middle of profile image
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.77f) // Takes up bottom 75% of screen
+                .fillMaxHeight(0.75f) // Takes up bottom 75% of screen
                 .align(Alignment.BottomCenter)
                 .clip(RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp)),
             colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F9FA))
@@ -137,14 +155,22 @@ fun ProfileScreen(navController: NavController? = null) {
                     
                     Spacer(modifier = Modifier.height(4.dp))
                     
-                    // User ID
+                    // User Email - Show actual email instead of ID
                     Text(
-                        text = "ID: ${userProfile?.id ?: "25030024"}",
+                        text = userProfile?.email ?: userEmail,
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color(0xFF6B7280)
                     )
+                    
+                    // User ID (optional - you can keep this or remove it)
+                    Text(
+                        text = "ID: ${userProfile?.id ?: "25030024"}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF9CA3AF)
+                    )
                 }
                 
+                // ... rest of your existing menu items code remains the same
                 Spacer(modifier = Modifier.height(32.dp))
                 
                 // Menu items
@@ -154,7 +180,7 @@ fun ProfileScreen(navController: NavController? = null) {
                         .padding(horizontal = 24.dp)
                 ) {
                     ProfileMenuItem(
-                        icon = R.drawable.ic_editprofile, // Change from Icons.Default.Person
+                        icon = R.drawable.ic_editprofile,
                         title = "Edit Profile",
                         iconColor = Color(0xFF7BB3FF),
                         onClick = {
@@ -164,7 +190,7 @@ fun ProfileScreen(navController: NavController? = null) {
                     )
 
                     ProfileMenuItem(
-                        icon = R.drawable.ic_security, // Change from Icons.Default.Security
+                        icon = R.drawable.ic_security,
                         title = "Security",
                         iconColor = Color(0xFF4A90E2),
                         onClick = {
@@ -174,7 +200,7 @@ fun ProfileScreen(navController: NavController? = null) {
                     )
 
                     ProfileMenuItem(
-                        icon = R.drawable.ic_setting, // Change from Icons.Default.Settings
+                        icon = R.drawable.ic_setting,
                         title = "Setting",
                         iconColor = Color(0xFF5A67D8),
                         onClick = {
@@ -184,7 +210,7 @@ fun ProfileScreen(navController: NavController? = null) {
                     )
 
                     ProfileMenuItem(
-                        icon = R.drawable.ic_help, // Change from Icons.Default.Help
+                        icon = R.drawable.ic_help,
                         title = "Help",
                         iconColor = Color(0xFF9CA3AF),
                         onClick = {
@@ -194,7 +220,7 @@ fun ProfileScreen(navController: NavController? = null) {
                     )
 
                     ProfileMenuItem(
-                        icon = R.drawable.ic_logout, // Change from Icons.Default.Logout
+                        icon = R.drawable.ic_logout,
                         title = "Logout",
                         iconColor = Color(0xFF4A90E2),
                         onClick = {
@@ -213,8 +239,8 @@ fun ProfileScreen(navController: NavController? = null) {
             modifier = Modifier
                 .size(140.dp)
                 .align(Alignment.TopCenter)
-                .offset(y = 125.dp) // Adjust this value to position correctly
-                .clip(RoundedCornerShape(60.dp))
+                .offset(y = 145.dp) // Adjusted for new header height
+                .clip(RoundedCornerShape(70.dp))
                 .background(Color.White),
             contentAlignment = Alignment.Center
         ) {

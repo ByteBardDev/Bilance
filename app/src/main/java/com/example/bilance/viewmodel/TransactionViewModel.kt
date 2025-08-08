@@ -1,140 +1,167 @@
-// File: TransactionViewModel.kt
 package com.example.bilance.viewmodel
 
-import android.content.ContentResolver
-import android.net.Uri
-import android.provider.Telephony
-import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
-import com.example.bilance.model.TransactionSMS
-import java.text.SimpleDateFormat
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import com.example.bilance.data.BilanceDatabase
+import com.example.bilance.data.Transaction
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import java.util.*
 
-class TransactionViewModel(
-    private val contentResolver: ContentResolver
-) : ViewModel() {
-
-    val notifications = mutableStateListOf<TransactionSMS>()
-
+class TransactionViewModel(private val database: BilanceDatabase) : ViewModel() {
+    
+    private val _transactions = MutableStateFlow<List<Transaction>>(emptyList())
+    val transactions: StateFlow<List<Transaction>> = _transactions.asStateFlow()
+    
+    private val _totalIncome = MutableStateFlow(0.0)
+    val totalIncome: StateFlow<Double> = _totalIncome.asStateFlow()
+    
+    private val _totalExpense = MutableStateFlow(0.0)
+    val totalExpense: StateFlow<Double> = _totalExpense.asStateFlow()
+    
+    private val _totalBalance = MutableStateFlow(0.0)
+    val totalBalance: StateFlow<Double> = _totalBalance.asStateFlow()
+    
+    private val _expensePercentage = MutableStateFlow(0.0)
+    val expensePercentage: StateFlow<Double> = _expensePercentage.asStateFlow()
+    
     init {
-        loadSMS()
+        println("DEBUG: TransactionViewModel init called - Instance: ${this.hashCode()}")
+        startTransactionCollection()
+        loadSummaryData()
     }
-
-    private fun loadSMS() {
-        val smsUri: Uri = Telephony.Sms.Inbox.CONTENT_URI
-        val projection = arrayOf(
-            Telephony.Sms._ID,
-            Telephony.Sms.ADDRESS,
-            Telephony.Sms.BODY,
-            Telephony.Sms.DATE
-        )
-
-        val cursor = contentResolver.query(
-            smsUri, projection, null, null, Telephony.Sms.DEFAULT_SORT_ORDER
-        )
-
-        val format = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-        cursor?.use {
-            val idIndex = cursor.getColumnIndexOrThrow(Telephony.Sms._ID)
-            val bodyIndex = cursor.getColumnIndexOrThrow(Telephony.Sms.BODY)
-            val addressIndex = cursor.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
-            val dateIndex = cursor.getColumnIndexOrThrow(Telephony.Sms.DATE)
-
-            var id = 0
-            while (cursor.moveToNext() && id < 50) {
-                val address = cursor.getString(addressIndex)
-                val body = cursor.getString(bodyIndex)
-                val timestamp = cursor.getLong(dateIndex)
-                val date = Date(timestamp)
-
-                val lower = body.lowercase()
-                if (lower.contains("debited") || lower.contains("credited") || lower.contains("transaction")) {
-                    var amount = "N/A"
-                    var type = "expense"
-
-                    // Enhanced amount extraction patterns based on actual SMS formats
-                    // Common pattern: "amount of INR 500.00"
-                    val amountOfPattern = Regex("""amount of (?:Rs\.?|INR|Rs|₹)\s*(\d+(?:[.,]\d+)?)""", RegexOption.IGNORE_CASE)
-
-                    // Standard patterns for currency amounts
-                    val mainAmountRegex = Regex("""(?:Rs\.?|INR|Rs|₹)\s*(\d+(?:[.,]\d+)?)""", RegexOption.IGNORE_CASE)
-                    val altAmountRegex = Regex("""(\d+(?:[.,]\d+)?)\s*(?:Rs\.?|INR|rupees)""", RegexOption.IGNORE_CASE)
-
-                    // Only use this as last resort to avoid matching irrelevant numbers
-                    val simpleAmountRegex = Regex("""(\d+(?:[.,]\d+)?)""")
-
-                    if (lower.contains("debited") || lower.contains("debit")) {
-                        // Try to extract amount with specific patterns for debit messages
-                        val debitedPattern = Regex("""(?:debited|debit)[^\d]*(?:Rs\.?|INR|₹)?\s*(\d+(?:[.,]\d+)?)""", RegexOption.IGNORE_CASE)
-
-                        // Try patterns in sequence from most specific to least specific
-                        amount = amountOfPattern.find(body)?.groupValues?.get(1)
-                            ?: debitedPattern.find(body)?.groupValues?.get(1)
-                                    ?: mainAmountRegex.find(body)?.groupValues?.get(1)
-                                    ?: altAmountRegex.find(body)?.groupValues?.get(1)
-                                    ?: simpleAmountRegex.find(body)?.groupValues?.get(1) ?: "N/A"
-
-                        // Debug info to help diagnose issues
-                        println("DEBIT SMS: $body")
-                        println("EXTRACTED AMOUNT: $amount")
-
-                        type = "expense"
-                    } else if (lower.contains("credited") || lower.contains("credit")) {
-                        // Try to extract amount with specific patterns for credit messages
-                        val creditedPattern = Regex("""(?:credited|credit)[^\d]*(?:Rs\.?|INR|₹)?\s*(\d+(?:[.,]\d+)?)""", RegexOption.IGNORE_CASE)
-
-                        // Try patterns in sequence from most specific to least specific
-                        amount = amountOfPattern.find(body)?.groupValues?.get(1)
-                            ?: creditedPattern.find(body)?.groupValues?.get(1)
-                                    ?: mainAmountRegex.find(body)?.groupValues?.get(1)
-                                    ?: altAmountRegex.find(body)?.groupValues?.get(1)
-                                    ?: simpleAmountRegex.find(body)?.groupValues?.get(1) ?: "N/A"
-
-                        // Debug info to help diagnose issues
-                        println("CREDIT SMS: $body")
-                        println("EXTRACTED AMOUNT: $amount")
-
-                        type = "income"
-                    }
-                    if (amount != "N/A") {
-                        val sms = TransactionSMS(
-                            id = id++,
-                            title = "Transaction",
-                            message = body.take(80),
-                            date = date,
-                            category = "Uncategorized",
-                            amount = "₹$amount",
-                            type = type
-                        )
-                        notifications.add(sms)
-                    }
-                }
+    
+    fun refreshTransactions() {
+        viewModelScope.launch {
+            println("DEBUG: refreshTransactions() called")
+            try {
+                // Manually trigger the flow to refresh by restarting the collection
+                loadTransactions()
+            } catch (e: Exception) {
+                println("DEBUG: Error in manual refresh: ${e.message}")
+                e.printStackTrace()
             }
         }
     }
-
-    fun updateSMS(sms: TransactionSMS, category: String, amount: String) {
-        val index = notifications.indexOfFirst { it.id == sms.id }
-        if (index != -1) {
-            notifications[index] = notifications[index].copy(category = category, amount = amount)
+    
+    private fun startTransactionCollection() {
+        viewModelScope.launch {
+            println("DEBUG: startTransactionCollection() called")
+            try {
+                database.transactionDao().getAllTransactionsByUser(1).collect { transactions ->
+                    println("DEBUG: Flow emitted ${transactions.size} transactions from database")
+                    println("DEBUG: Transaction titles: ${transactions.map { it.title }}")
+                    println("DEBUG: Setting _transactions.value with ${transactions.size} transactions")
+                    _transactions.value = transactions
+                    println("DEBUG: _transactions.value set, current size: ${_transactions.value.size}")
+                }
+            } catch (e: Exception) {
+                println("DEBUG: Error in transaction collection: ${e.message}")
+                e.printStackTrace()
+            }
         }
     }
-
-    fun removeSMS(sms: TransactionSMS) {
-        notifications.remove(sms)
+    
+    fun loadTransactions() {
+        println("DEBUG: loadTransactions() called - using existing collection")
+        // The collection is already started in init, just log current state
+        println("DEBUG: Current transactions count: ${_transactions.value.size}")
     }
-
-    fun addTransaction(title: String, amount: String, category: String, type: String) {
-        val newId = (notifications.maxByOrNull { it.id }?.id ?: 0) + 1
-        val sms = TransactionSMS(
-            id = newId,
-            title = title,
-            message = "Manual transaction entry",
-            date = Date(),
-            category = category,
-            amount = amount,
-            type = type
-        )
-        notifications.add(0, sms) // Add to the beginning of the list
+    
+    fun loadSummaryData() {
+        viewModelScope.launch {
+            val income = database.transactionDao().getTotalIncome(1) ?: 0.0
+            val expense = database.transactionDao().getTotalExpense(1) ?: 0.0
+            
+            println("DEBUG: loadSummaryData() - Income: $income, Expense: $expense")
+            
+            _totalIncome.value = income
+            _totalExpense.value = expense
+            _totalBalance.value = income - expense
+            
+            // Calculate expense percentage (assuming goal is ₹20,000)
+            val goal = 20000.0
+            _expensePercentage.value = if (goal > 0) (expense / goal) * 100 else 0.0
+        }
+    }
+    
+    fun addTransaction(
+        title: String,
+        amount: Double,
+        amountType: String,
+        category: String,
+        iconName: String
+    ) {
+        viewModelScope.launch {
+            try {
+                val transaction = Transaction(
+                    title = title,
+                    amount = amount,
+                    amountType = amountType,
+                    category = category,
+                    date = Date(),
+                    time = getCurrentTime(),
+                    iconName = iconName,
+                    userId = 1
+                )
+                println("DEBUG: Adding transaction: $title, amount: $amount, type: $amountType, category: $category")
+                println("DEBUG: Transaction object created: $transaction")
+                
+                val id = database.transactionDao().insertTransaction(transaction)
+                println("DEBUG: Transaction inserted with ID: $id")
+                
+                // The Flow should auto-update, and we'll also reload summary data
+                loadSummaryData()
+                println("DEBUG: Transaction added, waiting for Flow to update automatically")
+            } catch (e: Exception) {
+                println("DEBUG: Error adding transaction: ${e.message}")
+                e.printStackTrace()
+            }
+        }
+    }
+    
+    fun deleteTransaction(transaction: Transaction) {
+        viewModelScope.launch {
+            database.transactionDao().deleteTransaction(transaction)
+            loadSummaryData()
+        }
+    }
+    
+    private fun getCurrentTime(): String {
+        val calendar = Calendar.getInstance()
+        val hour = calendar.get(Calendar.HOUR_OF_DAY)
+        val minute = calendar.get(Calendar.MINUTE)
+        return String.format("%02d:%02d", hour, minute)
+    }
+    
+    fun getTransactionsByMonth(): Map<String, List<Transaction>> {
+        val transactions = _transactions.value
+        return transactions.groupBy { transaction ->
+            val calendar = Calendar.getInstance().apply { time = transaction.date }
+            val month = calendar.get(Calendar.MONTH)
+            val year = calendar.get(Calendar.YEAR)
+            getMonthName(month) + " " + year
+        }
+    }
+    
+    private fun getMonthName(month: Int): String {
+        return when (month) {
+            Calendar.JANUARY -> "January"
+            Calendar.FEBRUARY -> "February"
+            Calendar.MARCH -> "March"
+            Calendar.APRIL -> "April"
+            Calendar.MAY -> "May"
+            Calendar.JUNE -> "June"
+            Calendar.JULY -> "July"
+            Calendar.AUGUST -> "August"
+            Calendar.SEPTEMBER -> "September"
+            Calendar.OCTOBER -> "October"
+            Calendar.NOVEMBER -> "November"
+            Calendar.DECEMBER -> "December"
+            else -> "Unknown"
+        }
     }
 }

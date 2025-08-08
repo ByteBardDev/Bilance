@@ -4,9 +4,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -23,6 +27,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -50,7 +55,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
-    onLoginSuccess: () -> Unit = {},
+    onLoginSuccess: (String) -> Unit = {},
     onSignUpClick: () -> Unit = {}
 ) {
     var email by remember { mutableStateOf("") }
@@ -77,7 +82,7 @@ fun LoginScreen(
             )
         }
 
-        // Welcome text - Figma: x=143, y=100, width=145, height=22
+        // Welcome text - Centered
         Text(
             text = "Welcome",
             color = LaunchTextLight,
@@ -85,241 +90,249 @@ fun LoginScreen(
             fontWeight = FontWeight.Medium,
             textAlign = TextAlign.Center,
             modifier = Modifier
-                .width(145.dp)
-                .offset(x = 143.dp, y = 100.dp)
+                .fillMaxWidth()
+                .offset(y = 100.dp)
         )
 
-        // Base shape (white form area) - Figma: x=0, y=188, width=430, height=745
+        // Base shape (white form area) - Full width
         Box(
             modifier = Modifier
-                .width(430.dp)
+                .fillMaxWidth()
                 .height(745.dp)
-                .offset(x = 0.dp, y = 188.dp)
+                .offset(y = 188.dp)
                 .clip(RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp))
                 .background(LaunchBackgroundLight)
         )
 
-        // Username or email label - Figma: x=53, y=277, width=145, height=23
-        Text(
-            text = "Username or email",
-            color = LaunchTextDark,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Medium,
+        // Center all content within the form area
+        Column(
             modifier = Modifier
-                .width(145.dp)
-                .offset(x = 53.dp, y = 277.dp)
-        )
-
-        // Email input field background - Figma: x=37, y=308, width=356, height=41
-        Box(
-            modifier = Modifier
-                .width(356.dp)
-                .height(41.dp)
-                .offset(x = 37.dp, y = 308.dp)
-                .background(
-                    Color(0xFFC9E9F6), // Light blue background RGB(0.788, 0.914, 0.965)
-                    RoundedCornerShape(18.dp)
-                )
-                .border(
-                    1.dp,
-                    Color.Black,
-                    RoundedCornerShape(18.dp)
-                )
+                .fillMaxWidth()
+                .offset(y = 250.dp)
+                .padding(horizontal = 37.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            BasicTextField(
-                value = email,
-                onValueChange = { email = it },
-                textStyle = TextStyle(
-                    color = LaunchLinkText,
-                    fontSize = 14.sp
-                ),
-                decorationBox = { innerTextField ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .offset(x = 34.dp, y = 11.dp)
-                    ) {
-                        if (email.isEmpty()) {
-                            Text(
-                                text = "example@example.com",
-                                color = LaunchLinkText,
-                                fontSize = 14.sp
-                            )
-                        }
-                        innerTextField()
-                    }
-                },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                modifier = Modifier.fillMaxSize()
-            )
-        }
-
-        // Password label - Figma: x=53, y=372, width=73, height=23
-        Text(
-            text = "Password",
-            color = LaunchTextDark,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier
-                .width(73.dp)
-                .offset(x = 53.dp, y = 372.dp)
-        )
-
-        // Password input field background - Figma: x=37, y=398, width=356, height=41
-        Box(
-            modifier = Modifier
-                .width(356.dp)
-                .height(41.dp)
-                .offset(x = 37.dp, y = 398.dp)
-                .background(
-                    Color(0xFFC9E9F6), // Light blue background
-                    RoundedCornerShape(18.dp)
-                )
-        ) {
-            BasicTextField(
-                value = password,
-                onValueChange = { password = it },
-                textStyle = TextStyle(
-                    color = LaunchLinkText,
-                    fontSize = 14.sp
-                ),
-                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                decorationBox = { innerTextField ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .offset(x = 34.dp, y = 13.dp)
-                    ) {
-                        if (password.isEmpty()) {
-                            Text(
-                                text = "●●●●●●●●",
-                                color = LaunchLinkText,
-                                fontSize = 14.sp
-                            )
-                        }
-                        innerTextField()
-                    }
-                },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                modifier = Modifier.fillMaxSize()
-            )
-            
-            // Eye icon - Figma: x=354, y=416 (relative to password field: x=317, y=18)
-            IconButton(
-                onClick = { passwordVisible = !passwordVisible },
+            // Username or email label
+            Text(
+                text = "Username or email",
+                color = LaunchTextDark,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
                 modifier = Modifier
-                    .offset(x = 317.dp, y = 8.dp)
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                textAlign = TextAlign.Start
+            )
+
+            // Email input field
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(41.dp)
+                    .background(
+                        Color(0xFFC9E9F6),
+                        RoundedCornerShape(18.dp)
+                    )
+                    .border(
+                        1.dp,
+                        Color.Black,
+                        RoundedCornerShape(18.dp)
+                    )
             ) {
-                Text(
-                    text = if (passwordVisible) "👁️" else "👁️‍🗨️",
-                    color = LaunchLinkText,
-                    fontSize = 16.sp
+                BasicTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    textStyle = TextStyle(
+                        color = LaunchLinkText,
+                        fontSize = 14.sp
+                    ),
+                    decorationBox = { innerTextField ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp, vertical = 11.dp)
+                        ) {
+                            if (email.isEmpty()) {
+                                Text(
+                                    text = "example@example.com",
+                                    color = LaunchLinkText,
+                                    fontSize = 14.sp
+                                )
+                            }
+                            innerTextField()
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    modifier = Modifier.fillMaxSize()
                 )
             }
-        }
 
-        // Security message - Figma: x=74, y=470, width=273, height=28
-        Text(
-            text = "Store your password securely to avoid losing access",
-            color = LaunchTextBlue,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Normal,
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .width(290.dp)
-                
-                .offset(x = 74.dp, y = 470.dp)
-        )
+            Spacer(modifier = Modifier.height(24.dp))
 
-        // Error message display
-        if (loginError.isNotEmpty()) {
+            // Password label
             Text(
-                text = loginError,
-                color = Color.Red,
-                fontSize = 12.sp,
-                textAlign = TextAlign.Center,
+                text = "Password",
+                color = LaunchTextDark,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
                 modifier = Modifier
-                    .width(273.dp)
-                    .offset(x = 74.dp, y = 520.dp)
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                textAlign = TextAlign.Start
             )
-        }
 
-        // Login Button - Figma: x=107, y=558, width=207, height=45
-        Button(
-            onClick = { 
-                if (email.isBlank() || password.isBlank()) {
-                    loginError = "Please fill in all fields"
-                    return@Button
-                }
-                
-                isLoading = true
-                loginError = ""
-                
-                coroutineScope.launch {
-                    try {
-                        val user = database.userDao().login(email.trim(), password)
-                        if (user != null) {
-                            onLoginSuccess()
-                        } else {
-                            loginError = "Invalid email or password"
+            // Password input field
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(41.dp)
+                    .background(
+                        Color(0xFFC9E9F6),
+                        RoundedCornerShape(18.dp)
+                    )
+            ) {
+                BasicTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    textStyle = TextStyle(
+                        color = LaunchLinkText,
+                        fontSize = 14.sp
+                    ),
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    decorationBox = { innerTextField ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp, vertical = 13.dp)
+                        ) {
+                            if (password.isEmpty()) {
+                                Text(
+                                    text = "●●●●●●●●",
+                                    color = LaunchLinkText,
+                                    fontSize = 14.sp
+                                )
+                            }
+                            innerTextField()
                         }
-                    } catch (e: Exception) {
-                        loginError = "Login failed: ${e.message}"
-                    } finally {
-                        isLoading = false
-                    }
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    modifier = Modifier.fillMaxSize()
+                )
+
+                // Eye icon
+                IconButton(
+                    onClick = { passwordVisible = !passwordVisible },
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                ) {
+                    Text(
+                        text = if (passwordVisible) "👁️" else "👁️‍🗨️",
+                        color = LaunchLinkText,
+                        fontSize = 16.sp
+                    )
                 }
-            },
-            enabled = !isLoading,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = LaunchButtonBlue,
-                contentColor = LaunchTextLight
-            ),
-            shape = RoundedCornerShape(30.dp),
-            modifier = Modifier
-                .width(207.dp)
-                .height(45.dp)
-                .offset(x = 107.dp, y = 558.dp)
-        ) {
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Security message
             Text(
-                text = if (isLoading) "Logging in..." else "Log In",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium
+                text = "Store your password securely to avoid losing access",
+                color = LaunchTextBlue,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Normal,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Error message display
+            if (loginError.isNotEmpty()) {
+                Text(
+                    text = loginError,
+                    color = Color.Red,
+                    fontSize = 12.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+            }
+
+            // Login Button
+            Button(
+                onClick = { 
+                    if (email.isBlank() || password.isBlank()) {
+                        loginError = "Please fill in all fields"
+                        return@Button
+                    }
+                    
+                    isLoading = true
+                    loginError = ""
+                    
+                    coroutineScope.launch {
+                        try {
+                            val user = database.userDao().login(email.trim(), password)
+                            if (user != null) {
+                                onLoginSuccess(user.email)
+                            } else {
+                                loginError = "Invalid email or password"
+                            }
+                        } catch (e: Exception) {
+                            loginError = "Login failed: ${e.message}"
+                        } finally {
+                            isLoading = false
+                        }
+                    }
+                },
+                enabled = !isLoading,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = LaunchButtonBlue,
+                    contentColor = LaunchTextLight
+                ),
+                shape = RoundedCornerShape(30.dp),
+                modifier = Modifier
+                    .width(207.dp)
+                    .height(45.dp)
+            ) {
+                Text(
+                    text = if (isLoading) "Logging in..." else "Log In",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Sign Up Button
+            OutlinedButton(
+                onClick = onSignUpClick,
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = Color(0xFFC9E9F6),
+                    contentColor = LaunchTextBlue
+                ),
+                shape = RoundedCornerShape(30.dp),
+                modifier = Modifier
+                    .width(207.dp)
+                    .height(45.dp)
+            ) {
+                Text(
+                    text = "Sign Up",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Sign up link text
+            Text(
+                text = "Don't have an account? Sign Up",
+                color = LaunchTextDark,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Normal,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.clickable { onSignUpClick() }
             )
         }
-
-        // Sign Up Button - Figma: x=112, y=621, width=207, height=45
-        OutlinedButton(
-            onClick = onSignUpClick,
-            colors = ButtonDefaults.outlinedButtonColors(
-                containerColor = Color(0xFFC9E9F6),
-                contentColor = LaunchTextBlue
-            ),
-            shape = RoundedCornerShape(30.dp),
-            modifier = Modifier
-                .width(207.dp)
-                .height(45.dp)
-                .offset(x = 107.dp, y = 621.dp)
-        ) {
-            Text(
-                text = "Sign Up",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium
-            )
-        }
-
-        // Sign up link text - Figma: x=78, y=674, width=273, height=28
-        Text(
-            text = "Don't have an account? Sign Up",
-            color = LaunchTextDark,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Normal,
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .width(273.dp)
-                .offset(x = 78.dp, y = 674.dp)
-                .clickable { onSignUpClick() }
-        )
     }
 }
 

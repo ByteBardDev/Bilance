@@ -1,17 +1,17 @@
 package com.example.bilance.viewmodel
 
-import android.content.ContentResolver
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.example.bilance.data.BilanceDatabase
 
 class TransactionViewModelFactory(
-    private val contentResolver: ContentResolver
+    private val database: BilanceDatabase
 ) : ViewModelProvider.Factory {
 
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(TransactionViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return TransactionViewModel(contentResolver) as T
+            return TransactionViewModel(database) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

@@ -7,6 +7,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,7 +21,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.bilance.data.BilanceDatabase
+import com.example.bilance.viewmodel.SMSViewModel
 import com.example.bilance.viewmodel.TransactionViewModel
+import com.example.bilance.viewmodel.TransactionViewModelFactory
 import com.example.bilance.model.TransactionSMS
 import java.text.SimpleDateFormat
 import java.util.*
@@ -28,10 +34,13 @@ import java.util.*
 @Composable
 fun TransactionDetailsScreen(
     smsId: Int,
-    viewModel: TransactionViewModel,
+    viewModel: SMSViewModel,
     navController: NavController
 ) {
     val context = LocalContext.current
+    val transactionViewModel: TransactionViewModel = viewModel(
+        factory = TransactionViewModelFactory(BilanceDatabase.getDatabase(context))
+    )
 
     // Find the SMS by ID, if not found show error and navigate back
     val sms = viewModel.notifications.find { it.id == smsId }
@@ -123,8 +132,43 @@ fun TransactionDetailsScreen(
             ) {
                 Button(
                     onClick = {
+                        // Extract amount as double, removing currency symbols
+                        val amountValue = amount.replace(Regex("[₹$,\\s]"), "").toDoubleOrNull() ?: 0.0
+                        
+                        // Determine amount type
+                        val amountType = if (isIncome) "income" else "expense"
+                        
+                        // Get appropriate icon name based on category
+                        val iconName = when (selectedCategory.lowercase()) {
+                            "food" -> "Restaurant"
+                            "travel" -> "DirectionsCar"
+                            "shopping" -> "ShoppingCart"
+                            "groceries" -> "LocalGroceryStore"
+                            "bills" -> "Receipt"
+                            "salary" -> "AccountBalance"
+                            "business income" -> "Business"
+                            "ta/da" -> "CardTravel"
+                            "interest" -> "TrendingUp"
+                            "gift" -> "CardGiftcard"
+                            "other income" -> "AttachMoney"
+                            else -> "AttachMoney"
+                        }
+                        
+                        // Create transaction in database
+                        transactionViewModel.addTransaction(
+                            title = sms.title,
+                            amount = amountValue,
+                            amountType = amountType,
+                            category = selectedCategory,
+                            iconName = iconName
+                        )
+                        
+                        // Update SMS in the list
                         viewModel.updateSMS(sms, selectedCategory, amount)
+                        
                         Toast.makeText(context, "Transaction saved successfully", Toast.LENGTH_SHORT).show()
+                        // Refresh the transaction data before navigating back
+                        transactionViewModel.loadSummaryData()
                         navController.popBackStack()
                     },
                     colors = ButtonDefaults.buttonColors(
@@ -170,8 +214,8 @@ fun TransactionDetailsScreen(
 @Composable
 fun TransactionSummaryCard(sms: TransactionSMS, transactionType: String) {
     val (icon, iconColor) = when (transactionType) {
-        "Income" -> Pair(Icons.Default.TrendingUp, Color(0xFF10B981))
-        else -> Pair(Icons.Default.TrendingDown, Color(0xFFEF4444))
+        "Income" -> Pair(Icons.AutoMirrored.Filled.TrendingUp, Color(0xFF10B981))
+        else -> Pair(Icons.AutoMirrored.Filled.TrendingDown, Color(0xFFEF4444))
     }
 
     Card(

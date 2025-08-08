@@ -7,9 +7,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -18,13 +24,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.ui.platform.LocalContext
+import com.example.bilance.data.BilanceDatabase
+import com.example.bilance.ui.IconUtils
 import com.example.bilance.ui.theme.BilanceTheme
 import com.example.bilance.ui.theme.SplashBackgroundBlue
+import com.example.bilance.viewmodel.TransactionViewModel
+import com.example.bilance.viewmodel.TransactionViewModelFactory
+import java.text.SimpleDateFormat
+import java.util.*
 
-// Model for transaction
-data class Transaction(
+// UI Model for transaction display
+data class TransactionDisplay(
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
     val title: String,
     val time: String,
@@ -34,59 +48,68 @@ data class Transaction(
     val amountColor: Color
 )
 
+private fun getMonthName(month: Int): String {
+    return when (month) {
+        Calendar.JANUARY -> "January"
+        Calendar.FEBRUARY -> "February"
+        Calendar.MARCH -> "March"
+        Calendar.APRIL -> "April"
+        Calendar.MAY -> "May"
+        Calendar.JUNE -> "June"
+        Calendar.JULY -> "July"
+        Calendar.AUGUST -> "August"
+        Calendar.SEPTEMBER -> "September"
+        Calendar.OCTOBER -> "October"
+        Calendar.NOVEMBER -> "November"
+        Calendar.DECEMBER -> "December"
+        else -> "Unknown"
+    }
+}
+
 @Composable
-fun TransactionScreen(navController: NavController? = null) {
-    val transactionsByMonth = mapOf(
-        "April" to listOf(
-            Transaction(
-                icon = Icons.Default.AttachMoney,
-                title = "Salary",
-                time = "18:27",
-                date = "April 30",
-                category = "Monthly",
-                amount = "$4,000.00",
-                amountColor = Color(0xFF388E3C)
-            ),
-            Transaction(
-                icon = Icons.Default.ShoppingCart,
-                title = "Groceries",
-                time = "17:00",
-                date = "April 24",
-                category = "Pantry",
-                amount = "-$100.00",
-                amountColor = Color(0xFFB00020)
-            ),
-            Transaction(
-                icon = Icons.Default.Home,
-                title = "Rent",
-                time = "8:30",
-                date = "April 15",
-                category = "Rent",
-                amount = "-$674.40",
-                amountColor = Color(0xFFB00020)
-            ),
-            Transaction(
-                icon = Icons.Default.DirectionsCar,
-                title = "Transport",
-                time = "9:30",
-                date = "April 08",
-                category = "Fuel",
-                amount = "-$4.13",
-                amountColor = Color(0xFFB00020)
-            )
-        ),
-        "March" to listOf(
-            Transaction(
-                icon = Icons.Default.Restaurant,
-                title = "Food",
-                time = "19:30",
-                date = "March 31",
-                category = "Dinner",
-                amount = "-$70.40",
-                amountColor = Color(0xFFB00020)
-            )
-        )
-    )
+fun TransactionScreen(
+    navController: NavController? = null,
+    viewModel: TransactionViewModel
+) {
+    val transactions by viewModel.transactions.collectAsState()
+    val totalIncome by viewModel.totalIncome.collectAsState()
+    val totalExpense by viewModel.totalExpense.collectAsState()
+    val totalBalance by viewModel.totalBalance.collectAsState()
+    val expensePercentage by viewModel.expensePercentage.collectAsState()
+    
+    // Calculate transactions by month reactively
+    val transactionsByMonth = remember(transactions) {
+        println("DEBUG: TransactionScreen - Recalculating transactionsByMonth with ${transactions.size} transactions")
+        val grouped = transactions.groupBy { transaction ->
+            val calendar = Calendar.getInstance().apply { time = transaction.date }
+            val month = calendar.get(Calendar.MONTH)
+            val year = calendar.get(Calendar.YEAR)
+            getMonthName(month) + " " + year
+        }
+        println("DEBUG: TransactionScreen - Grouped into ${grouped.size} months: ${grouped.keys}")
+        grouped
+    }
+    
+    // Ensure transactions are loaded when screen is displayed
+    LaunchedEffect(Unit) {
+        println("DEBUG: TransactionScreen LaunchedEffect - Loading transactions")
+        viewModel.loadTransactions()
+    }
+    
+    // Debug logging for transactions
+    LaunchedEffect(transactions) {
+        println("DEBUG: TransactionScreen - Transactions updated: ${transactions.size} transactions")
+        println("DEBUG: TransactionScreen - Transaction titles: ${transactions.map { it.title }}")
+        println("DEBUG: TransactionScreen - ViewModel instance: ${viewModel.hashCode()}")
+    }
+    
+    // Debug logging for transactionsByMonth
+    LaunchedEffect(transactionsByMonth) {
+        println("DEBUG: TransactionScreen - transactionsByMonth updated: ${transactionsByMonth.size} months")
+        transactionsByMonth.forEach { (month, monthTransactions) ->
+            println("DEBUG: TransactionScreen - Month: $month, Transactions: ${monthTransactions.size}")
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -104,7 +127,7 @@ fun TransactionScreen(navController: NavController? = null) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = { /* Handle back navigation */ }) {
+                IconButton(onClick = { navController?.popBackStack() }) {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
@@ -118,9 +141,7 @@ fun TransactionScreen(navController: NavController? = null) {
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )
-                IconButton(onClick = { 
-                    navController?.navigate("notifications")
-                }) {
+                IconButton(onClick = { navController?.navigate("notifications") }) {
                     Box(
                         modifier = Modifier
                             .size(32.dp)
@@ -136,11 +157,23 @@ fun TransactionScreen(navController: NavController? = null) {
                         )
                     }
                 }
+                IconButton(onClick = { viewModel.loadTransactions() }) {
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = "Refresh",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
 
             // Balance Card
             BalanceCard(
-                modifier = Modifier.padding(horizontal = 16.dp)
+                modifier = Modifier.padding(horizontal = 16.dp),
+                totalBalance = totalBalance,
+                totalIncome = totalIncome,
+                totalExpense = totalExpense,
+                expensePercentage = expensePercentage
             )
 
             // Check message outside card
@@ -169,39 +202,115 @@ fun TransactionScreen(navController: NavController? = null) {
             }
 
             // Transactions list with rounded background
-            LazyColumn(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
                     .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
-                    .background(Color(0xFFF1FFF3)),
-                contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp)
+                    .background(Color(0xFFF8F9FA))
             ) {
-                transactionsByMonth.forEach { (month, transactions) ->
-                    item {
+                if (transactionsByMonth.isEmpty()) {
+                    // Show message when no transactions
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
                         Text(
-                            text = month,
-                            color = Color(0xFF052224),
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(
-                                start = 24.dp,
-                                top = 16.dp,
-                                bottom = 12.dp
-                            )
+                            text = "No transactions found",
+                            color = Color(0xFF6B7280),
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Medium
                         )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Add a transaction to get started",
+                            color = Color(0xFF9CA3AF),
+                            fontSize = 14.sp
+                        )
+                        println("DEBUG: Showing empty state - transactionsByMonth is empty")
                     }
-                    items(transactions) { transaction ->
-                        TransactionItem(transaction)
+                } else {
+                    LazyColumn(
+                        contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp)
+                    ) {
+                        println("DEBUG: LazyColumn - Rendering ${transactionsByMonth.size} months")
+                        transactionsByMonth.forEach { entry ->
+                            val month = entry.key
+                            val monthTransactions = entry.value
+                            println("DEBUG: LazyColumn - Rendering month: $month with ${monthTransactions.size} transactions")
+                            item {
+                                Text(
+                                    text = month,
+                                    color = Color(0xFF052224),
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(
+                                        start = 24.dp,
+                                        top = 16.dp,
+                                        bottom = 12.dp
+                                    )
+                                )
+                            }
+                            items(monthTransactions) { transaction ->
+                                println("DEBUG: LazyColumn - Rendering transaction: ${transaction.title}")
+                                TransactionItem(convertToDisplayTransaction(transaction))
+                            }
+                        }
                     }
+                }
+            }
+            
+            // Floating Action Button to add transaction
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.BottomEnd
+            ) {
+                FloatingActionButton(
+                    onClick = {
+                        navController?.navigate("addExpense/Manual")
+                    },
+                    modifier = Modifier.padding(24.dp),
+                    containerColor = SplashBackgroundBlue
+                ) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Add Transaction",
+                        tint = Color.White
+                    )
                 }
             }
         }
     }
 }
 
+fun convertToDisplayTransaction(transaction: com.example.bilance.data.Transaction): TransactionDisplay {
+    val dateFormat = SimpleDateFormat("HH:mm - MMM dd", Locale.getDefault())
+    val icon = IconUtils.getIconFromName(transaction.iconName)
+    val amountColor = if (transaction.amountType == "income") Color(0xFF388E3C) else Color(0xFFB00020)
+    val amountPrefix = if (transaction.amountType == "income") "" else "-"
+    
+    return TransactionDisplay(
+        icon = icon,
+        title = transaction.title,
+        time = transaction.time,
+        date = dateFormat.format(transaction.date),
+        category = transaction.category,
+        amount = "₹$amountPrefix${String.format("%.2f", transaction.amount)}",
+        amountColor = amountColor
+    )
+}
+
 @Composable
-fun BalanceCard(modifier: Modifier = Modifier) {
+fun BalanceCard(
+    modifier: Modifier = Modifier,
+    totalBalance: Double = 0.0,
+    totalIncome: Double = 0.0,
+    totalExpense: Double = 0.0,
+    expensePercentage: Double = 0.0
+) {
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -222,7 +331,7 @@ fun BalanceCard(modifier: Modifier = Modifier) {
                 fontWeight = FontWeight.Medium
             )
             Text(
-                "$7,783.00",
+                "₹${String.format("%.2f", totalBalance)}",
                 color = Color(0xFF052224),
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
@@ -239,28 +348,28 @@ fun BalanceCard(modifier: Modifier = Modifier) {
                 .padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Total Balance column
+            // Total Income column
             Column(
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        Icons.Default.TrendingUp,
+                        Icons.AutoMirrored.Filled.TrendingUp,
                         contentDescription = null,
                         tint = Color.White,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(Modifier.width(4.dp))
                     Text(
-                        "Total Balance",
+                        "Income",
                         color = Color.White,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium
                     )
                 }
                 Text(
-                    "$7,783.00",
+                    "₹${String.format("%.2f", totalIncome)}",
                     color = Color.White,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
@@ -283,21 +392,21 @@ fun BalanceCard(modifier: Modifier = Modifier) {
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        Icons.Default.TrendingDown,
+                        Icons.AutoMirrored.Filled.TrendingDown,
                         contentDescription = null,
                         tint = Color.White,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(Modifier.width(4.dp))
                     Text(
-                        "Total Expense",
+                        "Expense",
                         color = Color.White,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium
                     )
                 }
                 Text(
-                    "-$1,187.40",
+                    "₹${String.format("%.2f", totalExpense)}",
                     color = Color.White,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
@@ -326,13 +435,13 @@ fun BalanceCard(modifier: Modifier = Modifier) {
             Box(
                 modifier = Modifier
                     .height(28.dp)
-                    .fillMaxWidth(0.3f)
+                    .fillMaxWidth((expensePercentage / 100).toFloat())
                     .clip(RoundedCornerShape(18.dp))
                     .background(Color(0xFF052224))
             )
             // Progress text
             Text(
-                "30%",
+                "${String.format("%.0f", expensePercentage)}%",
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
@@ -342,7 +451,7 @@ fun BalanceCard(modifier: Modifier = Modifier) {
             )
             // Goal amount
             Text(
-                "$20,000.00",
+                "₹20,000.00",
                 color = Color(0xFF052224),
                 fontWeight = FontWeight.Medium,
                 fontSize = 14.sp,
@@ -355,7 +464,7 @@ fun BalanceCard(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun TransactionItem(transaction: Transaction) {
+fun TransactionItem(transaction: TransactionDisplay) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -393,7 +502,7 @@ fun TransactionItem(transaction: Transaction) {
             Spacer(modifier = Modifier.height(2.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    "${transaction.time} - ${transaction.date}",
+                    transaction.date,
                     color = SplashBackgroundBlue,
                     fontSize = 14.sp
                 )
@@ -424,7 +533,10 @@ fun TransactionItem(transaction: Transaction) {
 @Composable
 fun TransactionScreenPreview() {
     val navController = rememberNavController()
+    val context = LocalContext.current
+    val factory = TransactionViewModelFactory(BilanceDatabase.getDatabase(context))
+    val viewModel: TransactionViewModel = viewModel(factory = factory)
     BilanceTheme {
-        TransactionScreen(navController = navController)
+        TransactionScreen(navController = navController, viewModel = viewModel)
     }
 }

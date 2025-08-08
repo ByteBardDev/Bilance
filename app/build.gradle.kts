@@ -50,14 +50,14 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation("androidx.navigation:navigation-compose:2.7.5")
-
+    implementation("androidx.navigation:navigation-compose:2.9.2")
 
     // SQLite Database
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
-    //implementation(libs.androidx.navigation.runtime.android)
-    //implementation(libs.androidx.navigation.compose.jvmstubs)
+    implementation(libs.androidx.lifecycle.viewmodel.android)
+    implementation(libs.androidx.activity.ktx)
+    implementation(libs.androidx.foundation.android)
     kapt("androidx.room:room-compiler:2.6.1")
     
     // ViewModel and Coroutines

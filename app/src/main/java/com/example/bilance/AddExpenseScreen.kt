@@ -63,12 +63,13 @@ fun AddExpenseScreen(
                     IconButton(
                         onClick = {
                             if (isFormValid) {
-                                val formattedAmount = "₹${String.format(Locale.US, "%.2f", amount.toDouble())}"
+                                println("DEBUG: AddExpenseScreen - Adding transaction using ViewModel: ${viewModel.hashCode()}")
                                 viewModel.addTransaction(
                                     title = title,
-                                    amount = formattedAmount,
+                                    amount = amount.toDouble(),
+                                    amountType = transactionType,
                                     category = categoryName,
-                                    type = transactionType
+                                    iconName = "ShoppingCart"
                                 )
                                 navController.popBackStack()
                             }

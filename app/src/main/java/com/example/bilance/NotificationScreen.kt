@@ -25,14 +25,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.bilance.model.TransactionSMS
-import com.example.bilance.viewmodel.TransactionViewModel
+import com.example.bilance.viewmodel.SMSViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationScreen(
-    viewModel: TransactionViewModel,
+    viewModel: SMSViewModel,
     navController: NavController
 ) {
     val context = LocalContext.current
@@ -43,6 +43,7 @@ fun NotificationScreen(
     var selectedMonth by remember { mutableStateOf(Calendar.getInstance().get(Calendar.MONTH)) }
     var selectedYear by remember { mutableStateOf(Calendar.getInstance().get(Calendar.YEAR)) }
     var showMonthPicker by remember { mutableStateOf(false) }
+    var isFilterApplied by remember { mutableStateOf(false) }
 
     if (showMonthPicker) {
         AlertDialog(
@@ -85,6 +86,7 @@ fun NotificationScreen(
                                 .clickable {
                                     selectedMonth = index
                                     showMonthPicker = false
+                                    isFilterApplied = true
                                     Toast
                                         .makeText(context, "Filtered: ${months[selectedMonth]} $selectedYear", Toast.LENGTH_SHORT)
                                         .show()
@@ -125,6 +127,18 @@ fun NotificationScreen(
                     }
                 },
                 actions = {
+                    if (isFilterApplied) {
+                        IconButton(onClick = {
+                            isFilterApplied = false
+                            Toast.makeText(context, "Filter cleared", Toast.LENGTH_SHORT).show()
+                        }) {
+                            Icon(
+                                Icons.Default.Clear,
+                                contentDescription = "Clear Filter",
+                                tint = Color.White
+                            )
+                        }
+                    }
                     IconButton(onClick = {
                         showMonthPicker = true
                     }) {
@@ -142,11 +156,16 @@ fun NotificationScreen(
         }
     ) { padding ->
 
-        val grouped = viewModel.notifications
-            .filter { sms ->
+        val filteredNotifications = if (isFilterApplied) {
+            viewModel.notifications.filter { sms ->
                 val cal = Calendar.getInstance().apply { time = sms.date }
                 cal.get(Calendar.MONTH) == selectedMonth && cal.get(Calendar.YEAR) == selectedYear
             }
+        } else {
+            viewModel.notifications
+        }
+        
+        val grouped = filteredNotifications
             .groupBy { sms ->
                 val now = Calendar.getInstance()
                 val smsDate = Calendar.getInstance().apply { time = sms.date }

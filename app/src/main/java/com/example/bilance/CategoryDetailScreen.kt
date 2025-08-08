@@ -34,15 +34,14 @@ fun CategoryDetailScreen(
 ) {
     val transactions by remember {
         derivedStateOf {
-            viewModel.notifications.filter { it.category == categoryName }
+            viewModel.transactions.value.filter { it.category == categoryName }
         }
     }
 
     val totalAmount by remember {
         derivedStateOf {
             transactions.sumOf { transaction ->
-                val cleanAmount = transaction.amount.replace("₹", "").replace(",", "").toDoubleOrNull() ?: 0.0
-                if (transaction.type == "expense") -cleanAmount else cleanAmount
+                if (transaction.amountType == "expense") -transaction.amount else transaction.amount
             }
         }
     }
@@ -181,7 +180,7 @@ fun CategoryDetailScreen(
 
 @Composable
 fun TransactionCard(
-    transaction: TransactionSMS,
+    transaction: com.example.bilance.data.Transaction,
     onClick: () -> Unit
 ) {
     Card(
@@ -204,7 +203,7 @@ fun TransactionCard(
                     .size(48.dp)
                     .clip(RoundedCornerShape(24.dp))
                     .background(
-                        if (transaction.type == "expense")
+                        if (transaction.amountType == "expense")
                             Color(0xFFFFEBEE)
                         else
                             Color(0xFFE8F5E8)
@@ -212,10 +211,10 @@ fun TransactionCard(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = if (transaction.type == "expense") "−" else "+",
+                    text = if (transaction.amountType == "expense") "−" else "+",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (transaction.type == "expense")
+                    color = if (transaction.amountType == "expense")
                         Color(0xFFD32F2F)
                     else
                         Color(0xFF388E3C)
@@ -235,7 +234,7 @@ fun TransactionCard(
                     color = Color(0xFF283A5F)
                 )
                 Text(
-                    text = transaction.message.take(40) + if (transaction.message.length > 40) "..." else "",
+                    text = transaction.category,
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.Gray
                 )
@@ -248,10 +247,10 @@ fun TransactionCard(
 
             // Amount
             Text(
-                text = transaction.amount,
+                text = String.format(Locale.US, "$%.2f", transaction.amount),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
-                color = if (transaction.type == "expense")
+                color = if (transaction.amountType == "expense")
                     Color(0xFFD32F2F)
                 else
                     Color(0xFF388E3C)

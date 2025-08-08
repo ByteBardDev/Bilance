@@ -59,6 +59,7 @@ import com.example.bilance.data.DatabaseUtils
 import com.example.bilance.ui.theme.*
 import com.example.bilance.viewmodel.TransactionViewModel
 import com.example.bilance.viewmodel.TransactionViewModelFactory
+import com.example.bilance.viewmodel.SMSViewModel
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
@@ -86,61 +87,69 @@ fun BilanceApp() {
     val context = LocalContext.current
     val database = remember { BilanceDatabase.getDatabase(context) }
     val navController = rememberNavController()
+    
+    // Create a single shared ViewModel instance
+    val factory = remember { TransactionViewModelFactory(database) }
+    val sharedTransactionViewModel: TransactionViewModel = viewModel(factory = factory)
 
     LaunchedEffect(Unit) {
         DatabaseUtils.createDemoUser(database)
+        DatabaseUtils.createSampleTransactions(database)
     }
 
     NavHost(navController = navController, startDestination = "splash") {
-        composable("splash") {
-            SplashScreen(navController = navController)
-        }
-        composable("launch") {
-            LaunchScreen(
-                onLoginClick = { navController.navigate("login") },
-                onSignUpClick = { navController.navigate("signup") }
-            )
-        }
-        composable("login") {
-            LoginScreen(
-                onLoginSuccess = { navController.navigate("home") },
-                onSignUpClick = { navController.navigate("signup") }
-            )
-        }
-        composable("signup") {
-            SignUpScreen(
-                onSignUpSuccess = { navController.navigate("home") },
-                onLoginClick = { navController.navigate("login") }
-            )
-        }
-        composable("home") {
-            MainNavApp(navController = navController)
-        }
+    composable("splash") {
+        SplashScreen(navController = navController)
+    }
+    composable("launch") {
+        LaunchScreen(
+            onLoginClick = { navController.navigate("login") },
+            onSignUpClick = { navController.navigate("signup") }
+        )
+    }
+    composable("login") {
+        LoginScreen(
+            onLoginSuccess = { email -> 
+                navController.navigate("home/$email") {
+                    popUpTo("login") { inclusive = true }
+                }
+            },
+            onSignUpClick = { navController.navigate("signup") }
+        )
+    }
+    composable("signup") {
+        SignUpScreen(
+            onSignUpSuccess = { email -> 
+                navController.navigate("home/$email") {
+                    popUpTo("signup") { inclusive = true }
+                }
+            },
+            onLoginClick = { navController.navigate("login") }
+        )
+    }
+    composable("home/{email}") { backStackEntry ->
+        val email = backStackEntry.arguments?.getString("email") ?: ""
+        MainNavApp(navController = navController, userEmail = email, sharedTransactionViewModel = sharedTransactionViewModel)
+    }
         composable("notifications") {
-            val factory = remember { TransactionViewModelFactory(context.contentResolver) }
-            val viewModel: TransactionViewModel = viewModel(factory = factory)
+            val smsViewModel = remember { SMSViewModel(context.contentResolver) }
             NotificationScreen(
-                viewModel = viewModel,
+                viewModel = smsViewModel,
                 navController = navController
             )
         }
         composable("transactionDetail/{smsId}") { backStackEntry ->
             val smsId = backStackEntry.arguments?.getString("smsId")?.toIntOrNull() ?: return@composable
-            val factory = remember { TransactionViewModelFactory(context.contentResolver) }
-            val viewModel: TransactionViewModel = viewModel(factory = factory)
-            TransactionDetailsScreen(smsId = smsId, viewModel = viewModel, navController = navController)
+            val smsViewModel = remember { SMSViewModel(context.contentResolver) }
+            TransactionDetailsScreen(smsId = smsId, viewModel = smsViewModel, navController = navController)
         }
         composable("categoryDetail/{categoryName}") { backStackEntry ->
             val categoryName = backStackEntry.arguments?.getString("categoryName") ?: return@composable
-            val factory = remember { TransactionViewModelFactory(context.contentResolver) }
-            val viewModel: TransactionViewModel = viewModel(factory = factory)
-            CategoryDetailScreen(categoryName = categoryName, viewModel = viewModel, navController = navController)
+            CategoryDetailScreen(categoryName = categoryName, viewModel = sharedTransactionViewModel, navController = navController)
         }
         composable("addExpense/{categoryName}") { backStackEntry ->
             val categoryName = backStackEntry.arguments?.getString("categoryName") ?: return@composable
-            val factory = remember { TransactionViewModelFactory(context.contentResolver) }
-            val viewModel: TransactionViewModel = viewModel(factory = factory)
-            AddExpenseScreen(categoryName = categoryName, viewModel = viewModel, navController = navController)
+            AddExpenseScreen(categoryName = categoryName, viewModel = sharedTransactionViewModel, navController = navController)
         }
         composable("addCustomCategory") {
             AddCustomCategoryScreen(navController = navController)
@@ -212,11 +221,10 @@ fun AnalyticsScreen() {
 @Composable
 fun NotificationsTabScreen(navController: NavController) {
     val context = LocalContext.current
-    val factory = remember { TransactionViewModelFactory(context.contentResolver) }
-    val viewModel: TransactionViewModel = viewModel(factory = factory)
+    val smsViewModel = remember { SMSViewModel(context.contentResolver) }
     
     NotificationScreen(
-        viewModel = viewModel,
+        viewModel = smsViewModel,
         navController = navController
     )
 }
@@ -299,7 +307,6 @@ fun NavBarItem(
     }
 }
 
-
 @Composable
 fun SplashScreen(navController: NavController) {
     LaunchedEffect(Unit) {
@@ -308,11 +315,13 @@ fun SplashScreen(navController: NavController) {
             popUpTo("splash") { inclusive = true }
         }
     }
+    
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(SplashBackgroundBlue)
     ) {
+        // Apply overlay effects
         repeat(3) {
             Box(
                 modifier = Modifier
@@ -320,18 +329,26 @@ fun SplashScreen(navController: NavController) {
                     .background(SplashOverlayBlack)
             )
         }
-        Box(
-            modifier = Modifier
-                .width(336.dp)
-                .height(174.dp)
-                .offset(x = 38.dp, y = 307.dp),
-            contentAlignment = Alignment.Center
+        
+        // Center the logo
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.logo_white),
-                contentDescription = "Bilance Logo",
-                modifier = Modifier.fillMaxSize()
-            )
+            // Logo container
+            Box(
+                modifier = Modifier
+                    .width(336.dp)
+                    .height(174.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.logo_white),
+                    contentDescription = "Bilance Logo",
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
     }
 }
@@ -346,81 +363,97 @@ fun LaunchScreen(
             .fillMaxSize()
             .background(LaunchBackgroundLight)
     ) {
-        Box(
-            modifier = Modifier
-                .width(335.dp)
-                .height(174.dp)
-                .offset(x = 38.dp, y = 307.dp),
-            contentAlignment = Alignment.Center
+        // Center all content
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.logo),
-                contentDescription = "Bilance Logo",
-                modifier = Modifier.fillMaxSize()
-            )
-        }
+            // Logo section
+            Box(
+                modifier = Modifier
+                    .width(335.dp)
+                    .height(174.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.logo),
+                    contentDescription = "Bilance Logo",
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
 
-        Text(
-            text = "One App. All Your Transactions. Zero Noise.",
-            color = LaunchTextDark,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Normal,
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .width(268.dp)
-                .offset(x = 82.dp, y = 481.dp)
-        )
+            Spacer(modifier = Modifier.height(24.dp))
 
-        Button(
-            onClick = onLoginClick,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = LaunchButtonBlue,
-                contentColor = LaunchTextLight
-            ),
-            shape = RoundedCornerShape(30.dp),
-            modifier = Modifier
-                .width(207.dp)
-                .height(45.dp)
-                .offset(x = 112.dp, y = 530.dp)
-        ) {
+            // Tagline text
             Text(
-                text = "Log In",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium
+                text = "One App. All Your Transactions. Zero Noise.",
+                color = LaunchTextDark,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Normal,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .width(268.dp)
+                    .padding(horizontal = 16.dp)
             )
-        }
 
-        OutlinedButton(
-            onClick = onSignUpClick,
-            colors = ButtonDefaults.outlinedButtonColors(
-                containerColor = LaunchButtonLight,
-                contentColor = LaunchTextBlue
-            ),
-            shape = RoundedCornerShape(30.dp),
-            modifier = Modifier
-                .width(207.dp)
-                .height(45.dp)
-                .offset(x = 112.dp, y = 587.dp)
-        ) {
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Log In Button
+            Button(
+                onClick = onLoginClick,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = LaunchButtonBlue,
+                    contentColor = LaunchTextLight
+                ),
+                shape = RoundedCornerShape(30.dp),
+                modifier = Modifier
+                    .width(207.dp)
+                    .height(45.dp)
+            ) {
+                Text(
+                    text = "Log In",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Sign Up Button
+            OutlinedButton(
+                onClick = onSignUpClick,
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = LaunchButtonLight,
+                    contentColor = LaunchTextBlue
+                ),
+                shape = RoundedCornerShape(30.dp),
+                modifier = Modifier
+                    .width(207.dp)
+                    .height(45.dp)
+            ) {
+                Text(
+                    text = "Sign Up",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Forgot Password link
             Text(
-                text = "Sign Up",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium
+                text = "Forgot Password?",
+                color = LaunchLinkText,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Normal,
+                textDecoration = TextDecoration.Underline,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.clickable { 
+                    // Handle forgot password action
+                }
             )
         }
-
-        Text(
-            text = "Forgot Password?",
-            color = LaunchLinkText,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Normal,
-            textDecoration = TextDecoration.Underline,
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .width(127.dp)
-                .offset(x = 152.dp, y = 644.dp)
-                .clickable { }
-        )
     }
 }
 
@@ -433,11 +466,8 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun MainNavApp(navController: NavController) {
+fun MainNavApp(navController: NavController, userEmail: String = "", sharedTransactionViewModel: TransactionViewModel) {
     var currentTab by remember { mutableStateOf("home") }
-    val context = LocalContext.current
-    val factory = remember { TransactionViewModelFactory(context.contentResolver) }
-    val viewModel: TransactionViewModel = viewModel(factory = factory)
     
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -445,9 +475,9 @@ fun MainNavApp(navController: NavController) {
                 when (currentTab) {
                     "home" -> HomeScreen()
                     "analytics" -> AnalyticsScreen()
-                    "transaction" -> TransactionScreen(navController = navController)
-                    "categories" -> CategoriesScreen(viewModel = viewModel, navController = navController)
-                    "profile" -> ProfileScreen(navController = navController)
+                    "transaction" -> TransactionScreen(navController = navController, viewModel = sharedTransactionViewModel)
+                    "categories" -> CategoriesScreen(viewModel = sharedTransactionViewModel, navController = navController)
+                    "profile" -> ProfileScreen(navController = navController, userEmail = userEmail)
                 }
             }
             BottomNavBar(currentTab = currentTab, onTabSelected = { currentTab = it })
@@ -461,15 +491,6 @@ fun SplashScreenPreview() {
     val navController = rememberNavController()
     BilanceTheme {
         SplashScreen(navController = navController)
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun TransactionPreview() {
-    val navController = rememberNavController()
-    BilanceTheme {
-        TransactionScreen(navController = navController)
     }
 }
 
@@ -499,9 +520,20 @@ fun LoginPreview() {
 
 @Preview(showBackground = true)
 @Composable
+fun SignUpPreview() {
+    BilanceTheme {
+        SignUpScreen()
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
 fun GreetingPreview() {
     val navController = rememberNavController()
+    val context = LocalContext.current
+    val factory = TransactionViewModelFactory(BilanceDatabase.getDatabase(context))
+    val viewModel: TransactionViewModel = viewModel(factory = factory)
     BilanceTheme {
-        MainNavApp(navController = navController)
+        MainNavApp(navController = navController, sharedTransactionViewModel = viewModel)
     }
 }

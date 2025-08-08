@@ -34,6 +34,15 @@ data class CategoryData(
     val amount: Double
 )
 
+private fun calculateCategoryAmount(transactions: List<com.example.bilance.data.Transaction>, category: String): Double {
+    return transactions
+        .filter {
+            it.category.equals(category, ignoreCase = true) &&
+                    it.amountType == "expense"
+        }
+        .sumOf { it.amount }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoriesScreen(
@@ -42,21 +51,16 @@ fun CategoriesScreen(
 ) {
     val configuration = LocalConfiguration.current
     val screenWidth = configuration.screenWidthDp.dp
-    val screenHeight = configuration.screenHeightDp.dp
 
     // Calculate total balance and expenses from actual transaction data
-    val transactions = viewModel.notifications
+    val transactions = viewModel.transactions.collectAsState().value
     val totalBalance = transactions
-        .filter { it.message.lowercase().contains("credited") }
-        .sumOf {
-            it.amount.replace("[^\\d.]".toRegex(), "").toDoubleOrNull() ?: 0.0
-        }
+        .filter { it.amountType == "income" }
+        .sumOf { it.amount }
     val totalExpenses = transactions
-        .filter { it.message.lowercase().contains("debited") }
-        .sumOf {
-            it.amount.replace("[^\\d.]".toRegex(), "").toDoubleOrNull() ?: 0.0
-        }
-
+        .filter { it.amountType == "expense" }
+        .sumOf { it.amount }
+    
     // Category data with actual amounts from transactions
     val categories = listOf(
         CategoryData("Food", Icons.Default.Restaurant, Color(0xFF3B82F6),
@@ -137,15 +141,14 @@ fun CategoriesScreen(
             CategoriesGrid(
                 categories = categories,
                 navController = navController,
-                screenWidth = screenWidth,
-                screenHeight = screenHeight
+                screenWidth = screenWidth
             )
         }
     }
 }
 
 @Composable
-private fun BalanceCards(
+fun BalanceCards(
     totalBalance: Double,
     totalExpenses: Double,
     screenWidth: Dp
@@ -178,7 +181,7 @@ private fun BalanceCards(
                 verticalArrangement = Arrangement.SpaceEvenly
             ) {
                 Text(
-                    text = String.format(Locale.US, "$%.2f", totalBalance),
+                    text = String.format(Locale.US, "₹%.2f", totalBalance),
                     fontSize = when {
                         screenWidth < 360.dp -> 18.sp
                         screenWidth < 400.dp -> 20.sp
@@ -205,7 +208,7 @@ private fun BalanceCards(
                 )
 
                 Text(
-                    text = "of $20,000.00",
+                    text = "of ₹20,000.00",
                     fontSize = 10.sp,
                     color = Color.White.copy(alpha = 0.8f)
                 )
@@ -229,7 +232,7 @@ private fun BalanceCards(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = String.format(Locale.US, "-$%.2f", totalExpenses),
+                    text = String.format(Locale.US, "-₹%.2f", totalExpenses),
                     fontSize = when {
                         screenWidth < 360.dp -> 18.sp
                         screenWidth < 400.dp -> 20.sp
@@ -252,11 +255,10 @@ private fun BalanceCards(
 }
 
 @Composable
-private fun CategoriesGrid(
+fun CategoriesGrid(
     categories: List<CategoryData>,
     navController: NavController,
-    screenWidth: Dp,
-    screenHeight: Dp
+    screenWidth: Dp
 ) {
     // Responsive columns and card size
     val columns = when {
@@ -272,13 +274,13 @@ private fun CategoriesGrid(
         else -> 100.dp
     }
 
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(columns),
-        modifier = Modifier.fillMaxSize(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(bottom = 80.dp) // Extra padding for navigation
-    ) {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(columns),
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(bottom = 80.dp) // Extra padding for navigation
+        ) {
         items(categories) { category ->
             CategoryCard(
                 category = category,
@@ -296,7 +298,7 @@ private fun CategoriesGrid(
 }
 
 @Composable
-private fun CategoryCard(
+fun CategoryCard(
     category: CategoryData,
     cardSize: Dp,
     onClick: () -> Unit
@@ -340,22 +342,11 @@ private fun CategoryCard(
 
             if (category.amount > 0) {
                 Text(
-                    text = String.format(Locale.US, "$%.0f", category.amount),
+                    text = String.format(Locale.US, "₹%.0f", category.amount),
                     fontSize = 8.sp,
                     color = Color(0xFF6B7280)
                 )
             }
         }
     }
-}
-
-private fun calculateCategoryAmount(transactions: List<com.example.bilance.model.TransactionSMS>, category: String): Double {
-    return transactions
-        .filter {
-            it.category.equals(category, ignoreCase = true) &&
-                    it.message.lowercase().contains("debited")
-        }
-        .sumOf {
-            it.amount.replace("[^\\d.]".toRegex(), "").toDoubleOrNull() ?: 0.0
-        }
 }
