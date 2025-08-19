@@ -58,6 +58,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.android)
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.foundation.android)
+    implementation(libs.androidx.core.splashscreen)
     kapt("androidx.room:room-compiler:2.6.1")
     
     // ViewModel and Coroutines

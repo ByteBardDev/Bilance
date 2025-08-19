@@ -11,6 +11,22 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.LocalHospital
+import androidx.compose.material.icons.filled.Savings
+import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Flight
+import androidx.compose.material.icons.filled.LocalGroceryStore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,7 +48,7 @@ import java.util.Locale
 
 data class CategoryData(
     val name: String,
-    val iconRes: Int,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
     val color: Color,
     val amount: Double
 )
@@ -48,16 +64,22 @@ private fun calculateCategoryAmount(transactions: List<Transaction>, category: S
 
 private fun getCategoryData(categoryName: String, amount: Double): CategoryData {
     return when (categoryName.lowercase()) {
-        "food", "food & dining" -> CategoryData(categoryName, R.drawable.ic_food, Color(0xFF6CB5FD), amount)
-        "transport", "transportation" -> CategoryData(categoryName, R.drawable.ic_transport, Color(0xFF84CC16), amount)
-        "groceries" -> CategoryData(categoryName, R.drawable.ic_groceries, Color(0xFF7BB3FF), amount)
-        "rent" -> CategoryData(categoryName, R.drawable.ic_rent, Color(0xFFEF4444), amount)
-        "entertainment" -> CategoryData(categoryName, R.drawable.ic_chart, Color(0xFFEC4899), amount)
-        "salary" -> CategoryData(categoryName, R.drawable.ic_salary, Color(0xFF10B981), amount)
-        "transfer" -> CategoryData(categoryName, R.drawable.ic_transfer, Color(0xFF06B6D4), amount)
-        "medicine", "medical", "health" -> CategoryData(categoryName, R.drawable.ic_help, Color(0xFFF59E0B), amount)
-        "savings" -> CategoryData(categoryName, R.drawable.ic_salary, Color(0xFFC8E6C9), amount)
-        else -> CategoryData(categoryName, R.drawable.ic_layers, Color(0xFF9CA3AF), amount)
+        "food", "food & dining", "restaurant" -> CategoryData(categoryName, Icons.Default.Restaurant, Color(0xFF6CB5FD), amount)
+        "transport", "transportation", "travel" -> CategoryData(categoryName, Icons.Default.DirectionsCar, Color(0xFF84CC16), amount)
+        "groceries", "shopping" -> CategoryData(categoryName, Icons.Default.LocalGroceryStore, Color(0xFF7BB3FF), amount)
+        "rent", "housing", "home" -> CategoryData(categoryName, Icons.Default.Home, Color(0xFFEF4444), amount)
+        "entertainment", "movies", "games" -> CategoryData(categoryName, Icons.Default.Movie, Color(0xFFEC4899), amount)
+        "salary", "income", "earnings" -> CategoryData(categoryName, Icons.Default.AccountBalance, Color(0xFF10B981), amount)
+        "transfer", "banking" -> CategoryData(categoryName, Icons.Default.SwapHoriz, Color(0xFF06B6D4), amount)
+        "medicine", "medical", "health", "healthcare" -> CategoryData(categoryName, Icons.Default.LocalHospital, Color(0xFFF59E0B), amount)
+        "savings", "investment" -> CategoryData(categoryName, Icons.Default.Savings, Color(0xFFC8E6C9), amount)
+        "bills", "utilities" -> CategoryData(categoryName, Icons.Default.AttachMoney, Color(0xFF8B5CF6), amount)
+        "education", "school", "tuition" -> CategoryData(categoryName, Icons.Default.School, Color(0xFF3B82F6), amount)
+        "fitness", "gym", "sports" -> CategoryData(categoryName, Icons.Default.FitnessCenter, Color(0xFF10B981), amount)
+        "travel", "vacation", "flight" -> CategoryData(categoryName, Icons.Default.Flight, Color(0xFFF59E0B), amount)
+        "shopping", "clothing", "fashion" -> CategoryData(categoryName, Icons.Default.ShoppingCart, Color(0xFFEC4899), amount)
+        "credit card", "card payment" -> CategoryData(categoryName, Icons.Default.CreditCard, Color(0xFFEF4444), amount)
+        else -> CategoryData(categoryName, Icons.Default.Category, Color(0xFF9CA3AF), amount)
     }
 }
 
@@ -92,12 +114,18 @@ fun CategoriesScreen(
     
     // Combine with predefined categories (only show predefined ones that have transactions or are commonly used)
     val predefinedCategories = listOf(
-        CategoryData("Food", R.drawable.ic_food, Color(0xFF6CB5FD), 0.0),
-        CategoryData("Transport", R.drawable.ic_transport, Color(0xFF84CC16), 0.0),
-        CategoryData("Groceries", R.drawable.ic_groceries, Color(0xFF7BB3FF), 0.0),
-        CategoryData("Rent", R.drawable.ic_rent, Color(0xFFEF4444), 0.0),
-        CategoryData("Entertainment", R.drawable.ic_chart, Color(0xFFEC4899), 0.0),
-        CategoryData("Salary", R.drawable.ic_salary, Color(0xFF10B981), 0.0)
+        CategoryData("Food", Icons.Default.Restaurant, Color(0xFF6CB5FD), 0.0),
+        CategoryData("Transport", Icons.Default.DirectionsCar, Color(0xFF84CC16), 0.0),
+        CategoryData("Groceries", Icons.Default.LocalGroceryStore, Color(0xFF7BB3FF), 0.0),
+        CategoryData("Rent", Icons.Default.Home, Color(0xFFEF4444), 0.0),
+        CategoryData("Entertainment", Icons.Default.Movie, Color(0xFFEC4899), 0.0),
+        CategoryData("Salary", Icons.Default.AccountBalance, Color(0xFF10B981), 0.0),
+        CategoryData("Bills", Icons.Default.AttachMoney, Color(0xFF8B5CF6), 0.0),
+        CategoryData("Shopping", Icons.Default.ShoppingCart, Color(0xFFEC4899), 0.0),
+        CategoryData("Health", Icons.Default.LocalHospital, Color(0xFFF59E0B), 0.0),
+        CategoryData("Education", Icons.Default.School, Color(0xFF3B82F6), 0.0),
+        CategoryData("Fitness", Icons.Default.FitnessCenter, Color(0xFF10B981), 0.0),
+        CategoryData("Travel", Icons.Default.Flight, Color(0xFFF59E0B), 0.0)
     )
     
     val allCategories = remember(actualCategories) {
@@ -115,135 +143,147 @@ fun CategoriesScreen(
         }
         
         // Add "More" button at the end
-        displayCategories.add(CategoryData("More", R.drawable.ic_layers, Color(0xFFB2B2B2), 0.0))
+        displayCategories.add(CategoryData("More", Icons.Default.Category, Color(0xFFB2B2B2), 0.0))
         
         displayCategories
     }
 
-    Scaffold(
-        containerColor = ModernCategoryBg,
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Categories",
-                        fontSize = 22.sp,
-                        fontFamily = Poppins,
-                        fontWeight = FontWeight.Bold,
-                        color = com.example.bilance.ui.theme.TextOnPrimary
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = com.example.bilance.ui.theme.TextOnPrimary
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { navController.navigate("addCustomCategory") }) {
-                        Icon(
-                            Icons.Default.Add,
-                            contentDescription = "Add Custom Category",
-                            tint = com.example.bilance.ui.theme.TextOnPrimary
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = ModernAppBar
-                ),
-                modifier = Modifier.height(64.dp)
-            )
-        }
-    ) { padding ->
-        Box(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .background(
-                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                        colors = listOf(
-                            com.example.bilance.ui.theme.BackgroundPrimary,
-                            com.example.bilance.ui.theme.BackgroundSecondary
-                        )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                    colors = listOf(
+                        com.example.bilance.ui.theme.GradientStart,
+                        com.example.bilance.ui.theme.GradientEnd
                     )
                 )
+            )
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize()
         ) {
+            // Modern header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 50.dp, start = 24.dp, end = 24.dp, bottom = 20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = { navController.popBackStack() },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(com.example.bilance.ui.theme.TextOnPrimary.copy(alpha = 0.1f))
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = com.example.bilance.ui.theme.TextOnPrimary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                
+                Text(
+                    text = "Categories",
+                    color = com.example.bilance.ui.theme.TextOnPrimary,
+                    fontSize = 22.sp,
+                    fontFamily = Poppins,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                IconButton(
+                    onClick = { navController.navigate("addCustomCategory") },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(com.example.bilance.ui.theme.TextOnPrimary.copy(alpha = 0.1f))
+                ) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Add Custom Category",
+                        tint = com.example.bilance.ui.theme.TextOnPrimary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+            
+            // Main content
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 20.dp)
             ) {
-            // Balance header (rounded, Figma spacing)
-            Spacer(modifier = Modifier.height(22.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(90.dp),
-                    colors = CardDefaults.cardColors(containerColor = ModernAppBar),
-                    shape = RoundedCornerShape(20.dp),
-                    elevation = CardDefaults.cardElevation(8.dp)
-                ) {
-                    Column(
-                        Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 18.dp),
-                        horizontalAlignment = Alignment.Start,
-                        verticalArrangement = Arrangement.Center
+                // Balance header (rounded, Figma spacing)
+                Spacer(modifier = Modifier.height(22.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Card(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(100.dp),
+                        colors = CardDefaults.cardColors(containerColor = com.example.bilance.ui.theme.TextOnPrimary.copy(alpha = 0.95f)),
+                        shape = RoundedCornerShape(24.dp),
+                        elevation = CardDefaults.cardElevation(12.dp)
                     ) {
-                        Text(
-                            text = "Total Balance",
-                            color = com.example.bilance.ui.theme.TextOnPrimary.copy(alpha = 0.8f),
-                            fontFamily = Poppins,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 13.sp
-                        )
-                        Spacer(Modifier.height(3.dp))
-                        Text(
-                            text = String.format(Locale.US, "₹%,.2f", totalBalance),
-                            color = com.example.bilance.ui.theme.TextOnPrimary,
-                            fontFamily = LeagueSpartan,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 22.sp
-                        )
+                        Column(
+                            Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 20.dp),
+                            horizontalAlignment = Alignment.Start,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "Total Balance",
+                                color = com.example.bilance.ui.theme.TextSecondary.copy(alpha = 0.8f),
+                                fontFamily = Poppins,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 14.sp
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = String.format(Locale.US, "₹%,.2f", totalBalance),
+                                color = com.example.bilance.ui.theme.TextSecondary,
+                                fontFamily = LeagueSpartan,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 24.sp
+                            )
+                        }
+                    }
+                    Card(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(100.dp),
+                        colors = CardDefaults.cardColors(containerColor = com.example.bilance.ui.theme.SurfaceElevated),
+                        shape = RoundedCornerShape(24.dp),
+                        elevation = CardDefaults.cardElevation(12.dp)
+                    ) {
+                        Column(
+                            Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 20.dp),
+                            horizontalAlignment = Alignment.Start,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "Total Expense",
+                                color = com.example.bilance.ui.theme.TextSecondary,
+                                fontFamily = Poppins,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 14.sp
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = String.format(Locale.US, "₹%,.2f", totalExpense),
+                                color = com.example.bilance.ui.theme.PrimaryBlue,
+                                fontFamily = LeagueSpartan,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 24.sp
+                            )
+                        }
                     }
                 }
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(90.dp),
-                    colors = CardDefaults.cardColors(containerColor = ModernWhite),
-                    shape = RoundedCornerShape(20.dp),
-                    elevation = CardDefaults.cardElevation(8.dp)
-                ) {
-                    Column(
-                        Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 18.dp),
-                        horizontalAlignment = Alignment.Start,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = "Total Expense",
-                            color = Color(0xFF8C8A8A),
-                            fontFamily = Poppins,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 13.sp
-                        )
-                        Spacer(Modifier.height(3.dp))
-                        Text(
-                            text = String.format(Locale.US, "-₹%,.2f", totalExpense),
-                            color = Color(0xFF6CB5FD),
-                            fontFamily = LeagueSpartan,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 22.sp
-                        )
-                    }
-                }
-            }
                 Spacer(modifier = Modifier.height(18.dp))
                 // Category grid with real data (Modern spacing)
                 CategoriesGridFigma(allCategories, navController)
@@ -258,7 +298,7 @@ fun CategoriesGridFigma(
     navController: NavController
 ) {
     val columns = 3 // Figma reference
-    val cardSize = 94.dp
+    val cardSize = 112.dp
     LazyVerticalGrid(
         columns = GridCells.Fixed(columns),
         modifier = Modifier.fillMaxSize(),
@@ -288,54 +328,61 @@ fun CategoryCardFigma(
     cardSize: Dp,
     onClick: () -> Unit
 ) {
-    val CardBgWhite = Color(0xFFF1FFF2)
+    val CardBgWhite = Color(0xFFF8FFFE)
     Card(
         modifier = Modifier
             .size(cardSize)
             .clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = CardBgWhite),
-        shape = RoundedCornerShape(17.dp),
-        elevation = CardDefaults.cardElevation(0.dp)
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 16.dp, bottom = 8.dp, start = 7.dp, end = 7.dp),
+                .padding(top = 20.dp, bottom = 12.dp, start = 10.dp, end = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Box(
                 modifier = Modifier
-                    .size(34.dp)
+                    .size(44.dp)
                     .clip(CircleShape)
-                    .background(category.color.copy(alpha = if (category.name == "More") 0.10f else 0.20f)),
+                    .background(
+                        if (category.name == "More") {
+                            category.color.copy(alpha = 0.15f)
+                        } else {
+                            category.color.copy(alpha = 0.25f)
+                        }
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    painter = painterResource(id = category.iconRes),
+                    imageVector = category.icon,
                     contentDescription = category.name,
                     tint = category.color,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(26.dp)
                 )
             }
             Text(
                 text = category.name,
-                fontSize = 13.sp,
+                fontSize = 15.sp,
                 fontFamily = LeagueSpartan,
-                fontWeight = FontWeight.Medium,
-                color = Color(0xFF093030),
-                modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFF1A1A1A),
+                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
             if (category.amount > 0) {
                 Text(
                     text = String.format(Locale.US, "₹%,.0f", category.amount),
-                    fontSize = 11.sp,
+                    fontSize = 13.sp,
                     fontFamily = Poppins,
-                    fontWeight = FontWeight.Medium,
-                    color = Color(0xFF9A9696)
+                    fontWeight = FontWeight.SemiBold,
+                    color = category.color
                 )
             } else {
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
