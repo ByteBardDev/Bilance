@@ -15,6 +15,7 @@ data class Transaction(
     val date: Date,
     val time: String,
     val iconName: String, // Store icon name as string
+    val recipientName: String? = null,
     val userId: Int = 1, // Default user ID
     val createdAt: Long = System.currentTimeMillis()
 ) 

@@ -14,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -38,290 +39,357 @@ fun AddExpenseScreen(
 
     val isFormValid = title.isNotBlank() && amount.isNotBlank() && amount.toDoubleOrNull() != null && amount.toDoubleOrNull()!! > 0
 
-    Scaffold(
-        containerColor = Color(0xFFF8F9FA),
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Add Transaction",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                    colors = listOf(
+                        com.example.bilance.ui.theme.GradientStart,
+                        com.example.bilance.ui.theme.GradientEnd
                     )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            Icons.Default.ArrowBack,
-                            contentDescription = "Back",
-                            tint = Color.White
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = {
-                            if (isFormValid) {
-                                println("DEBUG: AddExpenseScreen - Adding transaction using ViewModel: ${viewModel.hashCode()}")
-                                viewModel.addTransaction(
-                                    title = title,
-                                    amount = amount.toDouble(),
-                                    amountType = transactionType,
-                                    category = categoryName,
-                                    iconName = "ShoppingCart"
-                                )
-                                navController.popBackStack()
-                            }
-                        },
-                        enabled = isFormValid
-                    ) {
-                        Icon(
-                            Icons.Default.Check,
-                            contentDescription = "Save Transaction",
-                            tint = if (isFormValid) Color.White else Color.Gray
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF283A5F)
                 )
             )
-        }
-    ) { padding ->
-        // Form Content
+    ) {
         Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier.fillMaxSize()
         ) {
-            // Category Display
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            // Modern top bar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 50.dp, start = 24.dp, end = 24.dp, bottom = 20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
+                IconButton(
+                    onClick = { navController.popBackStack() },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(com.example.bilance.ui.theme.TextOnPrimary.copy(alpha = 0.1f))
                 ) {
-                    Text(
-                        text = "Category",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Gray
+                    Icon(
+                        Icons.Default.ArrowBack,
+                        contentDescription = "Back",
+                        tint = com.example.bilance.ui.theme.TextOnPrimary,
+                        modifier = Modifier.size(20.dp)
                     )
-                    Text(
-                        text = categoryName,
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = Color(0xFF283A5F),
-                        fontWeight = FontWeight.Medium
+                }
+                
+                Text(
+                    text = "Add Transaction",
+                    color = com.example.bilance.ui.theme.TextOnPrimary,
+                    fontSize = 20.sp,
+                    fontFamily = com.example.bilance.ui.theme.Poppins,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                IconButton(
+                    onClick = {
+                        if (isFormValid) {
+                            println("DEBUG: AddExpenseScreen - Adding transaction using ViewModel: ${viewModel.hashCode()}")
+                            viewModel.addTransaction(
+                                title = title,
+                                amount = amount.toDouble(),
+                                amountType = transactionType,
+                                category = categoryName,
+                                iconName = "ShoppingCart"
+                            )
+                            navController.popBackStack()
+                        }
+                    },
+                    enabled = isFormValid,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            if (isFormValid) com.example.bilance.ui.theme.AccentGreen.copy(alpha = 0.15f)
+                            else com.example.bilance.ui.theme.TextMuted.copy(alpha = 0.1f)
+                        )
+                ) {
+                    Icon(
+                        Icons.Default.Check,
+                        contentDescription = "Save Transaction",
+                        tint = if (isFormValid) com.example.bilance.ui.theme.AccentGreen else com.example.bilance.ui.theme.TextMuted,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
-
-            // Transaction Type Selection
+            
+            // Modern card container
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(horizontal = 20.dp),
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = com.example.bilance.ui.theme.BackgroundPrimary
+                ),
+                elevation = CardDefaults.cardElevation(
+                    defaultElevation = 16.dp
+                )
             ) {
+                // Form Content
                 Column(
-                    modifier = Modifier.padding(16.dp)
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    Text(
-                        text = "Transaction Type",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Gray,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-
-                    ExposedDropdownMenuBox(
-                        expanded = expanded,
-                        onExpandedChange = { expanded = !expanded }
+                    // Category Display
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = com.example.bilance.ui.theme.SurfaceElevated
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                     ) {
-                        OutlinedTextField(
-                            value = if (transactionType == "expense") "Expense" else "Income",
-                            onValueChange = {},
-                            readOnly = true,
-                            trailingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.KeyboardArrowDown,
-                                    contentDescription = "Dropdown",
-                                    tint = Color(0xFF283A5F)
-                                )
-                            },
-                            modifier = Modifier
-                                .menuAnchor()
-                                .fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color(0xFF283A5F),
-                                unfocusedBorderColor = Color.Gray
-                            )
-                        )
-
-                        ExposedDropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false }
+                        Column(
+                            modifier = Modifier.padding(20.dp)
                         ) {
-                            DropdownMenuItem(
-                                text = { Text("Expense") },
-                                onClick = {
-                                    transactionType = "expense"
-                                    expanded = false
-                                }
+                            Text(
+                                text = "Category",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                fontFamily = com.example.bilance.ui.theme.Poppins,
+                                color = com.example.bilance.ui.theme.TextSecondary
                             )
-                            DropdownMenuItem(
-                                text = { Text("Income") },
-                                onClick = {
-                                    transactionType = "income"
-                                    expanded = false
-                                }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = categoryName,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                fontFamily = com.example.bilance.ui.theme.Poppins,
+                                color = com.example.bilance.ui.theme.PrimaryBlue
                             )
                         }
                     }
-                }
-            }
 
-            // Title Input
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        text = "Title",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Gray,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-
-                    OutlinedTextField(
-                        value = title,
-                        onValueChange = { title = it },
-                        placeholder = { Text("Enter transaction title") },
+                    // Transaction Type Selection
+                    Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFF283A5F),
-                            unfocusedBorderColor = Color.Gray
-                        )
-                    )
-                }
-            }
-
-            // Amount Input
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        text = "Amount",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Gray,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-
-                    OutlinedTextField(
-                        value = amount,
-                        onValueChange = { newValue ->
-                            // Allow only numeric input with decimal
-                            if (newValue.isEmpty() || newValue.matches(Regex("^\\d*\\.?\\d*$"))) {
-                                amount = newValue
-                            }
-                        },
-                        placeholder = { Text("0.00") },
-                        leadingIcon = {
-                            Text(
-                                text = "₹",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = Color(0xFF283A5F),
-                                fontWeight = FontWeight.Bold
-                            )
-                        },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFF283A5F),
-                            unfocusedBorderColor = Color.Gray
-                        )
-                    )
-                }
-            }
-
-            // Validation Message
-            if (title.isNotBlank() && amount.isNotBlank()) {
-                if (amount.toDoubleOrNull() == null || amount.toDoubleOrNull()!! <= 0) {
-                    Text(
-                        text = "Please enter a valid amount greater than 0",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Red,
-                        modifier = Modifier.padding(horizontal = 4.dp)
-                    )
-                }
-            }
-
-            // Preview Card
-            if (isFormValid) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (transactionType == "expense")
-                            Color(0xFFFFEBEE)
-                        else
-                            Color(0xFFE8F5E8)
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = com.example.bilance.ui.theme.SurfaceElevated
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                     ) {
-                        Text(
-                            text = "Preview",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.Gray,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                        Column(
+                            modifier = Modifier.padding(20.dp)
                         ) {
-                            Column {
-                                Text(
-                                    text = title,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.Medium,
-                                    color = Color(0xFF283A5F)
-                                )
-                                Text(
-                                    text = categoryName,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color.Gray
-                                )
-                            }
-
                             Text(
-                                text = "₹${String.format(Locale.US, "%.2f", amount.toDouble())}",
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = if (transactionType == "expense")
-                                    Color(0xFFD32F2F)
-                                else
-                                    Color(0xFF388E3C)
+                                text = "Transaction Type",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                fontFamily = com.example.bilance.ui.theme.Poppins,
+                                color = com.example.bilance.ui.theme.TextSecondary,
+                                modifier = Modifier.padding(bottom = 8.dp)
                             )
+
+                            ExposedDropdownMenuBox(
+                                expanded = expanded,
+                                onExpandedChange = { expanded = !expanded }
+                            ) {
+                                OutlinedTextField(
+                                    value = if (transactionType == "expense") "Expense" else "Income",
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    trailingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.KeyboardArrowDown,
+                                            contentDescription = "Dropdown",
+                                            tint = com.example.bilance.ui.theme.PrimaryBlue
+                                        )
+                                    },
+                                    modifier = Modifier
+                                        .menuAnchor()
+                                        .fillMaxWidth(),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = com.example.bilance.ui.theme.PrimaryBlue,
+                                        unfocusedBorderColor = com.example.bilance.ui.theme.BorderColor
+                                    )
+                                )
+
+                                ExposedDropdownMenu(
+                                    expanded = expanded,
+                                    onDismissRequest = { expanded = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Expense") },
+                                        onClick = {
+                                            transactionType = "expense"
+                                            expanded = false
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Income") },
+                                        onClick = {
+                                            transactionType = "income"
+                                            expanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Title Input
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = com.example.bilance.ui.theme.SurfaceElevated
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(20.dp)
+                        ) {
+                            Text(
+                                text = "Title",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                fontFamily = com.example.bilance.ui.theme.Poppins,
+                                color = com.example.bilance.ui.theme.TextSecondary,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+
+                            OutlinedTextField(
+                                value = title,
+                                onValueChange = { title = it },
+                                placeholder = { Text("Enter transaction title") },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = com.example.bilance.ui.theme.PrimaryBlue,
+                                    unfocusedBorderColor = com.example.bilance.ui.theme.BorderColor
+                                )
+                            )
+                        }
+                    }
+
+                    // Amount Input
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = com.example.bilance.ui.theme.SurfaceElevated
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(20.dp)
+                        ) {
+                            Text(
+                                text = "Amount",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                fontFamily = com.example.bilance.ui.theme.Poppins,
+                                color = com.example.bilance.ui.theme.TextSecondary,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+
+                            OutlinedTextField(
+                                value = amount,
+                                onValueChange = { newValue ->
+                                    // Allow only numeric input with decimal
+                                    if (newValue.isEmpty() || newValue.matches(Regex("^\\d*\\.?\\d*$"))) {
+                                        amount = newValue
+                                    }
+                                },
+                                placeholder = { Text("0.00") },
+                                leadingIcon = {
+                                    Text(
+                                        text = "₹",
+                                        fontSize = 18.sp,
+                                        color = com.example.bilance.ui.theme.PrimaryBlue,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = com.example.bilance.ui.theme.Poppins
+                                    )
+                                },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = com.example.bilance.ui.theme.PrimaryBlue,
+                                    unfocusedBorderColor = com.example.bilance.ui.theme.BorderColor
+                                )
+                            )
+                        }
+                    }
+
+                    // Validation Message
+                    if (title.isNotBlank() && amount.isNotBlank()) {
+                        if (amount.toDoubleOrNull() == null || amount.toDoubleOrNull()!! <= 0) {
+                            Text(
+                                text = "Please enter a valid amount greater than 0",
+                                fontSize = 12.sp,
+                                fontFamily = com.example.bilance.ui.theme.Poppins,
+                                color = com.example.bilance.ui.theme.AccentRed,
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            )
+                        }
+                    }
+
+                    // Preview Card
+                    if (isFormValid) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (transactionType == "expense")
+                                    com.example.bilance.ui.theme.AccentRed.copy(alpha = 0.1f)
+                                else
+                                    com.example.bilance.ui.theme.AccentGreen.copy(alpha = 0.1f)
+                            ),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(20.dp)
+                            ) {
+                                Text(
+                                    text = "Preview",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    fontFamily = com.example.bilance.ui.theme.Poppins,
+                                    color = com.example.bilance.ui.theme.TextSecondary,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = title,
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            fontFamily = com.example.bilance.ui.theme.Poppins,
+                                            color = com.example.bilance.ui.theme.TextPrimary
+                                        )
+                                        Text(
+                                            text = categoryName,
+                                            fontSize = 12.sp,
+                                            fontFamily = com.example.bilance.ui.theme.Poppins,
+                                            color = com.example.bilance.ui.theme.TextSecondary
+                                        )
+                                    }
+
+                                    Text(
+                                        text = "₹${String.format(Locale.US, "%.2f", amount.toDouble())}",
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = com.example.bilance.ui.theme.Poppins,
+                                        color = if (transactionType == "expense")
+                                            com.example.bilance.ui.theme.AccentRed
+                                        else
+                                            com.example.bilance.ui.theme.AccentGreen
+                                    )
+                                }
+                            }
                         }
                     }
                 }
