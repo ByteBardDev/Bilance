@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -71,92 +72,139 @@ fun LoginScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(SplashBackgroundBlue)
-    ) {
-        // Apply overlay effects
-        repeat(3) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(SplashOverlayBlack)
+            .background(
+                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                    colors = listOf(
+                        com.example.bilance.ui.theme.GradientStart,
+                        com.example.bilance.ui.theme.GradientEnd
+                    )
+                )
             )
-        }
+    ) {
+        // Subtle overlay for depth
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                        colors = listOf(
+                            com.example.bilance.ui.theme.PrimaryBlue.copy(alpha = 0.1f),
+                            Color.Transparent
+                        ),
+                        radius = 800f
+                    )
+                )
+        )
 
         // Welcome text - Centered
         Text(
-            text = "Welcome",
-            color = LaunchTextLight,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Medium,
+            text = "Welcome Back",
+            color = com.example.bilance.ui.theme.TextOnPrimary,
+            fontSize = 32.sp,
+            fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
+            fontFamily = com.example.bilance.ui.theme.Poppins,
             modifier = Modifier
                 .fillMaxWidth()
                 .offset(y = 100.dp)
         )
-
-        // Base shape (white form area) - Full width
-        Box(
+        
+        Text(
+            text = "Sign in to continue your financial journey",
+            color = com.example.bilance.ui.theme.TextOnPrimary.copy(alpha = 0.8f),
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Normal,
+            textAlign = TextAlign.Center,
+            fontFamily = com.example.bilance.ui.theme.Poppins,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(745.dp)
-                .offset(y = 188.dp)
-                .clip(RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp))
-                .background(LaunchBackgroundLight)
+                .offset(y = 150.dp)
+                .padding(horizontal = 32.dp)
         )
 
-        // Center all content within the form area
+        // Modern form card
+        androidx.compose.material3.Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(550.dp)
+                .offset(y = 220.dp)
+                .padding(horizontal = 24.dp),
+            shape = RoundedCornerShape(28.dp),
+            colors = androidx.compose.material3.CardDefaults.cardColors(
+                containerColor = com.example.bilance.ui.theme.SurfaceElevated
+            ),
+            elevation = androidx.compose.material3.CardDefaults.cardElevation(
+                defaultElevation = 20.dp
+            )
+        ) {
+            // Subtle inner gradient for modern look
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                            colors = listOf(
+                                com.example.bilance.ui.theme.SurfaceElevated,
+                                com.example.bilance.ui.theme.BackgroundPrimary.copy(alpha = 0.5f)
+                            )
+                        )
+                    )
+            )
+        }
+
+        // Form content inside the card
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .offset(y = 250.dp)
-                .padding(horizontal = 37.dp),
+                .offset(y = 260.dp)
+                .padding(horizontal = 40.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Username or email label
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            // Email input field with modern styling
             Text(
-                text = "Username or email",
-                color = LaunchTextDark,
-                fontSize = 16.sp,
+                text = "Email Address",
+                color = com.example.bilance.ui.theme.TextPrimary,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
+                fontFamily = com.example.bilance.ui.theme.Poppins,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 8.dp),
                 textAlign = TextAlign.Start
             )
 
-            // Email input field
-            Box(
+            androidx.compose.material3.Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(41.dp)
-                    .background(
-                        Color(0xFFC9E9F6),
-                        RoundedCornerShape(18.dp)
-                    )
-                    .border(
-                        1.dp,
-                        Color.Black,
-                        RoundedCornerShape(18.dp)
-                    )
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = androidx.compose.material3.CardDefaults.cardColors(
+                    containerColor = com.example.bilance.ui.theme.BackgroundPrimary
+                ),
+                elevation = androidx.compose.material3.CardDefaults.cardElevation(0.dp)
             ) {
                 BasicTextField(
                     value = email,
                     onValueChange = { email = it },
                     textStyle = TextStyle(
-                        color = LaunchLinkText,
-                        fontSize = 14.sp
+                        color = com.example.bilance.ui.theme.TextPrimary,
+                        fontSize = 16.sp,
+                        fontFamily = com.example.bilance.ui.theme.Poppins
                     ),
                     decorationBox = { innerTextField ->
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(horizontal = 16.dp, vertical = 11.dp)
+                                .padding(horizontal = 20.dp, vertical = 16.dp)
                         ) {
                             if (email.isEmpty()) {
                                 Text(
-                                    text = "example@example.com",
-                                    color = LaunchLinkText,
-                                    fontSize = 14.sp
+                                    text = "Enter your email",
+                                    color = com.example.bilance.ui.theme.TextMuted,
+                                    fontSize = 16.sp,
+                                    fontFamily = com.example.bilance.ui.theme.Poppins
                                 )
                             }
                             innerTextField()
@@ -167,98 +215,100 @@ fun LoginScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // Password label
+            // Password input field with modern styling
             Text(
                 text = "Password",
-                color = LaunchTextDark,
-                fontSize = 16.sp,
+                color = com.example.bilance.ui.theme.TextPrimary,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
+                fontFamily = com.example.bilance.ui.theme.Poppins,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 8.dp),
                 textAlign = TextAlign.Start
             )
 
-            // Password input field
-            Box(
+            androidx.compose.material3.Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(41.dp)
-                    .background(
-                        Color(0xFFC9E9F6),
-                        RoundedCornerShape(18.dp)
-                    )
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = androidx.compose.material3.CardDefaults.cardColors(
+                    containerColor = com.example.bilance.ui.theme.BackgroundPrimary
+                ),
+                elevation = androidx.compose.material3.CardDefaults.cardElevation(0.dp)
             ) {
                 BasicTextField(
                     value = password,
                     onValueChange = { password = it },
                     textStyle = TextStyle(
-                        color = LaunchLinkText,
-                        fontSize = 14.sp
+                        color = com.example.bilance.ui.theme.TextPrimary,
+                        fontSize = 16.sp,
+                        fontFamily = com.example.bilance.ui.theme.Poppins
                     ),
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     decorationBox = { innerTextField ->
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(horizontal = 16.dp, vertical = 13.dp)
+                                .padding(horizontal = 20.dp, vertical = 16.dp)
                         ) {
                             if (password.isEmpty()) {
                                 Text(
-                                    text = "●●●●●●●●",
-                                    color = LaunchLinkText,
-                                    fontSize = 14.sp
+                                    text = "Enter your password",
+                                    color = com.example.bilance.ui.theme.TextMuted,
+                                    fontSize = 16.sp,
+                                    fontFamily = com.example.bilance.ui.theme.Poppins
                                 )
                             }
                             innerTextField()
+                            
+                            // Eye icon positioned at the end
+                            IconButton(
+                                onClick = { passwordVisible = !passwordVisible },
+                                modifier = Modifier.align(Alignment.CenterEnd)
+                            ) {
+                                Text(
+                                    text = if (passwordVisible) "👁️" else "👁️‍🗨️",
+                                    color = com.example.bilance.ui.theme.TextMuted,
+                                    fontSize = 18.sp
+                                )
+                            }
                         }
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     modifier = Modifier.fillMaxSize()
                 )
+            }
 
-                // Eye icon
-                IconButton(
-                    onClick = { passwordVisible = !passwordVisible },
-                    modifier = Modifier.align(Alignment.CenterEnd)
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Error message display
+            if (loginError.isNotEmpty()) {
+                androidx.compose.material3.Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = androidx.compose.material3.CardDefaults.cardColors(
+                        containerColor = com.example.bilance.ui.theme.AccentRed.copy(alpha = 0.1f)
+                    )
                 ) {
                     Text(
-                        text = if (passwordVisible) "👁️" else "👁️‍🗨️",
-                        color = LaunchLinkText,
-                        fontSize = 16.sp
+                        text = loginError,
+                        color = com.example.bilance.ui.theme.AccentRed,
+                        fontSize = 14.sp,
+                        fontFamily = com.example.bilance.ui.theme.Poppins,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(16.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Security message
-            Text(
-                text = "Store your password securely to avoid losing access",
-                color = LaunchTextBlue,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Normal,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Error message display
-            if (loginError.isNotEmpty()) {
-                Text(
-                    text = loginError,
-                    color = Color.Red,
-                    fontSize = 12.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-            }
-
-            // Login Button
-            Button(
+            // Modern Login Button
+            androidx.compose.material3.Button(
                 onClick = { 
                     if (email.isBlank() || password.isBlank()) {
                         loginError = "Please fill in all fields"
@@ -284,54 +334,60 @@ fun LoginScreen(
                     }
                 },
                 enabled = !isLoading,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = LaunchButtonBlue,
-                    contentColor = LaunchTextLight
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    containerColor = com.example.bilance.ui.theme.PrimaryBlue,
+                    contentColor = com.example.bilance.ui.theme.TextOnPrimary,
+                    disabledContainerColor = com.example.bilance.ui.theme.TextMuted
                 ),
-                shape = RoundedCornerShape(30.dp),
+                shape = RoundedCornerShape(16.dp),
+                elevation = androidx.compose.material3.ButtonDefaults.buttonElevation(
+                    defaultElevation = 4.dp,
+                    pressedElevation = 8.dp,
+                    disabledElevation = 0.dp
+                ),
                 modifier = Modifier
-                    .width(207.dp)
-                    .height(45.dp)
+                    .fillMaxWidth()
+                    .height(56.dp)
             ) {
-                Text(
-                    text = if (isLoading) "Logging in..." else "Log In",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium
-                )
+                if (isLoading) {
+                    androidx.compose.material3.CircularProgressIndicator(
+                        color = com.example.bilance.ui.theme.TextOnPrimary,
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(20.dp)
+                    )
+                } else {
+                    Text(
+                        text = "Sign In",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        fontFamily = com.example.bilance.ui.theme.Poppins
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Sign Up Button
-            OutlinedButton(
-                onClick = onSignUpClick,
-                colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = Color(0xFFC9E9F6),
-                    contentColor = LaunchTextBlue
-                ),
-                shape = RoundedCornerShape(30.dp),
-                modifier = Modifier
-                    .width(207.dp)
-                    .height(45.dp)
-            ) {
-                Text(
-                    text = "Sign Up",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             // Sign up link text
-            Text(
-                text = "Don't have an account? Sign Up",
-                color = LaunchTextDark,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Normal,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.clickable { onSignUpClick() }
-            )
+            androidx.compose.foundation.layout.Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center
+            ) {
+                Text(
+                    text = "Don't have an account? ",
+                    color = com.example.bilance.ui.theme.TextSecondary,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Normal,
+                    fontFamily = com.example.bilance.ui.theme.Poppins
+                )
+                Text(
+                    text = "Sign Up",
+                    color = com.example.bilance.ui.theme.PrimaryBlue,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    fontFamily = com.example.bilance.ui.theme.Poppins,
+                    modifier = Modifier.clickable { onSignUpClick() }
+                )
+            }
         }
     }
 }

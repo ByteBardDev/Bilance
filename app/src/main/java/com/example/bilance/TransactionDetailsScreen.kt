@@ -67,6 +67,7 @@ fun TransactionDetailsScreen(
 
     var selectedCategory by remember { mutableStateOf(if (sms.category in categoryOptions) sms.category else "Uncategorized") }
     var amount by remember { mutableStateOf(sms.amount) }
+    var recipient by remember { mutableStateOf(sms.recipient ?: "") }
     val isIncome = transactionType == "Income"
 
     Scaffold(
@@ -120,7 +121,9 @@ fun TransactionDetailsScreen(
                 selectedCategory = selectedCategory,
                 onCategoryChange = { selectedCategory = it },
                 categoryOptions = categoryOptions,
-                isIncome = isIncome
+                isIncome = isIncome,
+                recipient = recipient,
+                onRecipientChange = { recipient = it }
             )
 
             Spacer(modifier = Modifier.weight(1f))
@@ -160,11 +163,12 @@ fun TransactionDetailsScreen(
                             amount = amountValue,
                             amountType = amountType,
                             category = selectedCategory,
-                            iconName = iconName
+                            iconName = iconName,
+                            recipientName = if (recipient.isBlank()) null else recipient
                         )
                         
                         // Update SMS in the list
-                        viewModel.updateSMS(sms, selectedCategory, amount)
+                        viewModel.updateSMS(sms.copy(recipient = if (recipient.isBlank()) null else recipient), selectedCategory, amount)
                         
                         Toast.makeText(context, "Transaction saved successfully", Toast.LENGTH_SHORT).show()
                         // Refresh the transaction data before navigating back
@@ -259,8 +263,10 @@ fun TransactionSummaryCard(sms: TransactionSMS, transactionType: String) {
                     color = Color(0xFF2D3748)
                 )
                 Spacer(modifier = Modifier.height(4.dp))
+                val label = if (transactionType == "Income") "From" else "To"
+                val name = sms.recipient ?: "Unknown"
                 Text(
-                    text = "From: ${sms.title}",
+                    text = "$label: $name",
                     fontSize = 12.sp,
                     color = Color(0xFF718096)
                 )
@@ -300,7 +306,9 @@ fun TransactionDetailsCard(
     selectedCategory: String,
     onCategoryChange: (String) -> Unit,
     categoryOptions: List<String>,
-    isIncome: Boolean
+    isIncome: Boolean,
+    recipient: String,
+    onRecipientChange: (String) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -368,6 +376,25 @@ fun TransactionDetailsCard(
                 },
                 singleLine = true,
                 readOnly = true,
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFF283A5F),
+                    unfocusedBorderColor = Color(0xFFE2E8F0)
+                ),
+                shape = RoundedCornerShape(8.dp)
+            )
+
+            // Recipient Field
+            OutlinedTextField(
+                value = recipient,
+                onValueChange = onRecipientChange,
+                label = {
+                    Text(
+                        text = if (isIncome) "From (Sender)" else "To (Recipient)",
+                        color = Color(0xFF4A5568)
+                    )
+                },
+                singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFF283A5F),

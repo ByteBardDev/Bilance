@@ -46,132 +46,174 @@ fun CategoryDetailScreen(
         }
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF8F9FA))
+            .background(
+                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                    colors = listOf(
+                        com.example.bilance.ui.theme.GradientStart,
+                        com.example.bilance.ui.theme.GradientEnd
+                    )
+                )
+            )
     ) {
-        // Top Navigation Bar
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFF283A5F))
-                .padding(16.dp)
+        Column(
+            modifier = Modifier.fillMaxSize()
         ) {
+            // Modern Top Navigation Bar
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 50.dp, start = 24.dp, end = 24.dp, bottom = 20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
-                    onClick = { navController.popBackStack() }
+                    onClick = { navController.popBackStack() },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(com.example.bilance.ui.theme.TextOnPrimary.copy(alpha = 0.1f))
                 ) {
                     Icon(
                         imageVector = Icons.Default.ArrowBack,
                         contentDescription = "Back",
-                        tint = Color.White
+                        tint = com.example.bilance.ui.theme.TextOnPrimary,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
-
                 Text(
                     text = categoryName,
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
+                    fontSize = 20.sp,
+                    fontFamily = com.example.bilance.ui.theme.Poppins,
+                    fontWeight = FontWeight.Bold,
+                    color = com.example.bilance.ui.theme.TextOnPrimary
                 )
 
-                Spacer(modifier = Modifier.weight(1f))
-
-                FloatingActionButton(
+                androidx.compose.material3.FloatingActionButton(
                     onClick = {
                         navController.navigate("addExpense/${categoryName}")
                     },
-                    containerColor = Color.White,
-                    contentColor = Color(0xFF283A5F),
+                    containerColor = com.example.bilance.ui.theme.AccentGreen,
+                    contentColor = com.example.bilance.ui.theme.TextOnPrimary,
                     modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
-                        contentDescription = "Add Expense"
+                        contentDescription = "Add Expense",
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
-        }
-
-        // Category Summary Card
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(20.dp)
+            
+            // Modern card container
+            androidx.compose.material3.Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(horizontal = 20.dp),
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                colors = androidx.compose.material3.CardDefaults.cardColors(
+                    containerColor = com.example.bilance.ui.theme.BackgroundPrimary
+                ),
+                elevation = androidx.compose.material3.CardDefaults.cardElevation(
+                    defaultElevation = 16.dp
+                )
             ) {
-                Text(
-                    text = "Total Spent",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray
-                )
-                Text(
-                    text = "₹${String.format(Locale.US, "%.2f", kotlin.math.abs(totalAmount))}",
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = if (totalAmount < 0) Color.Red else Color(0xFF4CAF50),
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "${transactions.size} transactions",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
-            }
-        }
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp)
+                ) {
 
-        // Transactions List
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            if (transactions.isEmpty()) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(32.dp),
-                        contentAlignment = Alignment.Center
+                    // Modern Category Summary Card
+                    androidx.compose.material3.Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = androidx.compose.material3.CardDefaults.cardColors(
+                            containerColor = com.example.bilance.ui.theme.SurfaceElevated
+                        ),
+                        elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 8.dp)
                     ) {
                         Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            modifier = Modifier.padding(24.dp)
                         ) {
                             Text(
-                                text = "No transactions yet",
-                                style = MaterialTheme.typography.headlineSmall,
-                                color = Color.Gray,
-                                textAlign = TextAlign.Center
+                                text = "Total Spent",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                fontFamily = com.example.bilance.ui.theme.Poppins,
+                                color = com.example.bilance.ui.theme.TextSecondary
                             )
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Tap the + button to add your first expense",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color.Gray,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.padding(top = 8.dp)
+                                text = "₹${String.format(Locale.US, "%.2f", kotlin.math.abs(totalAmount))}",
+                                fontSize = 32.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = com.example.bilance.ui.theme.Poppins,
+                                color = if (totalAmount < 0) com.example.bilance.ui.theme.AccentRed else com.example.bilance.ui.theme.AccentGreen
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "${transactions.size} transactions",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Normal,
+                                fontFamily = com.example.bilance.ui.theme.Poppins,
+                                color = com.example.bilance.ui.theme.TextMuted
                             )
                         }
                     }
-                }
-            } else {
-                items(transactions) { transaction ->
-                    TransactionCard(
-                        transaction = transaction,
-                        onClick = {
-                            navController.navigate("transactionDetail/${transaction.id}")
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Transactions List
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        if (transactions.isEmpty()) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(32.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            text = "No transactions yet",
+                                            fontSize = 18.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            fontFamily = com.example.bilance.ui.theme.Poppins,
+                                            color = com.example.bilance.ui.theme.TextSecondary,
+                                            textAlign = TextAlign.Center
+                                        )
+                                        Text(
+                                            text = "Tap the + button to add your first expense",
+                                            fontSize = 14.sp,
+                                            fontFamily = com.example.bilance.ui.theme.Poppins,
+                                            color = com.example.bilance.ui.theme.TextMuted,
+                                            textAlign = TextAlign.Center,
+                                            modifier = Modifier.padding(top = 8.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            items(transactions) { transaction ->
+                                TransactionCard(
+                                    transaction = transaction,
+                                    onClick = {
+                                        navController.navigate("transactionDetail/${transaction.id}")
+                                    }
+                                )
+                            }
                         }
-                    )
+                    }
                 }
             }
         }
@@ -247,7 +289,7 @@ fun TransactionCard(
 
             // Amount
             Text(
-                text = String.format(Locale.US, "$%.2f", transaction.amount),
+                text = String.format(Locale.US, "₹%.2f", transaction.amount),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
                 color = if (transaction.amountType == "expense")

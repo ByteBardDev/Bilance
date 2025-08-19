@@ -3,6 +3,7 @@ package com.example.bilance.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.bilance.UserPreferences
 import com.example.bilance.data.BilanceDatabase
 import com.example.bilance.data.Transaction
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -57,6 +58,9 @@ class TransactionViewModel(private val database: BilanceDatabase) : ViewModel() 
                     println("DEBUG: Setting _transactions.value with ${transactions.size} transactions")
                     _transactions.value = transactions
                     println("DEBUG: _transactions.value set, current size: ${_transactions.value.size}")
+                    
+                    // Recalculate summary whenever transactions change
+                    loadSummaryData()
                 }
             } catch (e: Exception) {
                 println("DEBUG: Error in transaction collection: ${e.message}")
@@ -75,16 +79,17 @@ class TransactionViewModel(private val database: BilanceDatabase) : ViewModel() 
         viewModelScope.launch {
             val income = database.transactionDao().getTotalIncome(1) ?: 0.0
             val expense = database.transactionDao().getTotalExpense(1) ?: 0.0
+            val initialBalance = UserPreferences.getInitialBalance()
             
             println("DEBUG: loadSummaryData() - Income: $income, Expense: $expense")
             
             _totalIncome.value = income
             _totalExpense.value = expense
-            _totalBalance.value = income - expense
-            
-            // Calculate expense percentage (assuming goal is ₹20,000)
-            val goal = 20000.0
-            _expensePercentage.value = if (goal > 0) (expense / goal) * 100 else 0.0
+            val available = initialBalance + income
+            _totalBalance.value = available - expense
+
+            // Calculate expense percentage based on initial balance + total income
+            _expensePercentage.value = if (available > 0) (expense / available) * 100 else 0.0
         }
     }
     
@@ -93,7 +98,9 @@ class TransactionViewModel(private val database: BilanceDatabase) : ViewModel() 
         amount: Double,
         amountType: String,
         category: String,
-        iconName: String
+        iconName: String,
+        recipientName: String? = null,
+        date: Date = Date() // Default to current date if not provided
     ) {
         viewModelScope.launch {
             try {
@@ -102,9 +109,10 @@ class TransactionViewModel(private val database: BilanceDatabase) : ViewModel() 
                     amount = amount,
                     amountType = amountType,
                     category = category,
-                    date = Date(),
+                    date = date,
                     time = getCurrentTime(),
                     iconName = iconName,
+                    recipientName = recipientName,
                     userId = 1
                 )
                 println("DEBUG: Adding transaction: $title, amount: $amount, type: $amountType, category: $category")
@@ -162,6 +170,56 @@ class TransactionViewModel(private val database: BilanceDatabase) : ViewModel() 
             Calendar.NOVEMBER -> "November"
             Calendar.DECEMBER -> "December"
             else -> "Unknown"
+        }
+    }
+    
+    // Method to convert SMS transaction to database transaction
+    fun addTransactionFromSMS(
+        smsTransaction: com.example.bilance.model.TransactionSMS,
+        finalCategory: String,
+        finalAmount: String
+    ) {
+        viewModelScope.launch {
+            try {
+                // Extract numeric amount from string (remove ₹ and any formatting)
+                val cleanAmount = finalAmount.replace("₹", "").replace(",", "").trim()
+                val numericAmount = cleanAmount.toDoubleOrNull() ?: 0.0
+                
+                // Determine icon based on category
+                val iconName = when (finalCategory.lowercase()) {
+                    "food", "food & dining" -> "food"
+                    "groceries" -> "groceries"
+                    "transport", "transportation" -> "transport"
+                    "rent" -> "rent"
+                    "salary" -> "salary"
+                    "transfer" -> "transfer"
+                    else -> "layers"
+                }
+                
+                val transaction = Transaction(
+                    title = if (smsTransaction.title.isNotBlank()) smsTransaction.title else "SMS Transaction",
+                    amount = numericAmount,
+                    amountType = smsTransaction.type.ifEmpty { "expense" },
+                    category = finalCategory,
+                    date = smsTransaction.date,
+                    time = getCurrentTime(),
+                    iconName = iconName,
+                    recipientName = smsTransaction.recipient,
+                    userId = 1
+                )
+                
+                println("DEBUG: Converting SMS transaction to database transaction: $transaction")
+                
+                val id = database.transactionDao().insertTransaction(transaction)
+                println("DEBUG: SMS Transaction converted and inserted with ID: $id")
+                
+                // Reload summary data to reflect new transaction
+                loadSummaryData()
+                
+            } catch (e: Exception) {
+                println("DEBUG: Error converting SMS transaction: ${e.message}")
+                e.printStackTrace()
+            }
         }
     }
 }

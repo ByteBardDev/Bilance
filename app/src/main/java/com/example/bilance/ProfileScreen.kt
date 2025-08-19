@@ -24,6 +24,14 @@ import androidx.navigation.compose.rememberNavController
 import com.example.bilance.data.BilanceDatabase
 import com.example.bilance.data.User
 import com.example.bilance.ui.theme.BilanceTheme
+import com.example.bilance.ui.theme.LeagueSpartan
+import com.example.bilance.ui.theme.Poppins
+import com.example.bilance.ui.theme.Purple40
+import com.example.bilance.ui.theme.Purple80
+import com.example.bilance.ui.theme.PurpleGrey40
+import com.example.bilance.ui.theme.PurpleGrey80
+import com.example.bilance.ui.theme.SurfaceWhite
+import com.example.bilance.ui.theme.TextMuted
 import kotlinx.coroutines.launch
 
 // Update the ProfileScreen header section to match TransactionScreen style
@@ -71,17 +79,17 @@ fun ProfileScreen(navController: NavController? = null, userEmail: String = "") 
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Background blue section
+        // Background purple section
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFF283A5F))
+                .background(Purple40)
         ) {
             // Header - matching TransactionScreen style
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 40.dp, start = 16.dp, end = 16.dp, bottom = 20.dp),
+                    .padding(top = 40.dp, start = 20.dp, end = 20.dp, bottom = 18.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -91,15 +99,16 @@ fun ProfileScreen(navController: NavController? = null, userEmail: String = "") 
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = Color.White,
+                        tint = SurfaceWhite,
                         modifier = Modifier.size(24.dp)
                     )
                 }
                 Text(
                     text = "Profile",
-                    color = Color.White,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
+                    color = SurfaceWhite,
+                    fontFamily = Poppins,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
                 )
                 IconButton(onClick = { 
                     navController?.navigate("notifications")
@@ -108,13 +117,13 @@ fun ProfileScreen(navController: NavController? = null, userEmail: String = "") 
                         modifier = Modifier
                             .size(32.dp)
                             .clip(RoundedCornerShape(16.dp))
-                            .background(Color.White.copy(alpha = 0.2f)),
+                            .background(Purple80.copy(alpha = 0.23f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            Icons.Default.Notifications,
+                            painter = painterResource(id = R.drawable.ic_bell),
                             contentDescription = "Notifications",
-                            tint = Color.White,
+                            tint = SurfaceWhite,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -122,17 +131,17 @@ fun ProfileScreen(navController: NavController? = null, userEmail: String = "") 
             }
             
             // Space for profile picture - reduced since header takes more space now
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(12.dp))
         }
         
         // White card that starts from middle of profile image
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.75f) // Takes up bottom 75% of screen
+                .fillMaxHeight(0.79f) // Takes up bottom 75% of screen
                 .align(Alignment.BottomCenter)
                 .clip(RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp)),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F9FA))
+            colors = CardDefaults.cardColors(containerColor = SurfaceWhite)
         ) {
             Column(
                 modifier = Modifier.fillMaxSize()
@@ -148,9 +157,10 @@ fun ProfileScreen(navController: NavController? = null, userEmail: String = "") 
                     // User Name
                     Text(
                         text = userProfile?.fullName ?: "John Smith",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = Color(0xFF283A5F),
-                        fontWeight = FontWeight.Bold
+                        color = Purple80,
+                        fontFamily = Poppins,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 23.sp
                     )
                     
                     Spacer(modifier = Modifier.height(4.dp))
@@ -158,15 +168,18 @@ fun ProfileScreen(navController: NavController? = null, userEmail: String = "") 
                     // User Email - Show actual email instead of ID
                     Text(
                         text = userProfile?.email ?: userEmail,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF6B7280)
+                        color = TextMuted,
+                        fontFamily = LeagueSpartan,
+                        fontSize = 16.sp
                     )
                     
                     // User ID (optional - you can keep this or remove it)
                     Text(
                         text = "ID: ${userProfile?.id ?: "25030024"}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF9CA3AF)
+                        color = PurpleGrey40,
+                        fontFamily = LeagueSpartan,
+                        fontSize = 13.sp
                     )
                 }
                 
@@ -182,7 +195,7 @@ fun ProfileScreen(navController: NavController? = null, userEmail: String = "") 
                     ProfileMenuItem(
                         icon = R.drawable.ic_editprofile,
                         title = "Edit Profile",
-                        iconColor = Color(0xFF7BB3FF),
+                        iconColor = Purple80,
                         onClick = {
                             // Navigate to edit profile screen
                             // navController?.navigate("edit_profile")
@@ -192,7 +205,7 @@ fun ProfileScreen(navController: NavController? = null, userEmail: String = "") 
                     ProfileMenuItem(
                         icon = R.drawable.ic_security,
                         title = "Security",
-                        iconColor = Color(0xFF4A90E2),
+                        iconColor = Purple80.copy(alpha = 0.85f),
                         onClick = {
                             // Navigate to security settings
                             // navController?.navigate("security_settings")
@@ -201,18 +214,18 @@ fun ProfileScreen(navController: NavController? = null, userEmail: String = "") 
 
                     ProfileMenuItem(
                         icon = R.drawable.ic_setting,
-                        title = "Setting",
-                        iconColor = Color(0xFF5A67D8),
+                        title = "Settings",
+                        iconColor = Purple80.copy(alpha = 0.66f),
                         onClick = {
-                            // Navigate to general settings
-                            // navController?.navigate("general_settings")
+                            // Show settings options
+                            navController?.navigate("settings")
                         }
                     )
 
                     ProfileMenuItem(
                         icon = R.drawable.ic_help,
                         title = "Help",
-                        iconColor = Color(0xFF9CA3AF),
+                        iconColor = Purple80.copy(alpha = 0.3f),
                         onClick = {
                             // Navigate to help screen
                             // navController?.navigate("help")
@@ -222,9 +235,10 @@ fun ProfileScreen(navController: NavController? = null, userEmail: String = "") 
                     ProfileMenuItem(
                         icon = R.drawable.ic_logout,
                         title = "Logout",
-                        iconColor = Color(0xFF4A90E2),
+                        iconColor = PurpleGrey80.copy(alpha = 0.8f),
                         onClick = {
                             // Handle logout - navigate back to launch screen
+                            UserPreferences.clearSession()
                             navController?.navigate("launch") {
                                 popUpTo(0) { inclusive = true }
                             }
@@ -237,18 +251,18 @@ fun ProfileScreen(navController: NavController? = null, userEmail: String = "") 
         // Profile Picture - positioned to overlap the card
         Box(
             modifier = Modifier
-                .size(140.dp)
+                .size(122.dp)
                 .align(Alignment.TopCenter)
-                .offset(y = 145.dp) // Adjusted for new header height
-                .clip(RoundedCornerShape(70.dp))
-                .background(Color.White),
+                .offset(y = 120.dp) // Adjusted for new header height
+                .clip(RoundedCornerShape(61.dp))
+                .background(Purple80),
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.Person,
+                painter = painterResource(id = R.drawable.ic_user),
                 contentDescription = "Profile Picture",
-                tint = Color(0xFF283A5F),
-                modifier = Modifier.size(60.dp)
+                tint = SurfaceWhite,
+                modifier = Modifier.size(62.dp)
             )
         }
     }
@@ -264,8 +278,9 @@ fun ProfileMenuItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
             .clickable { onClick() }
-            .padding(vertical = 16.dp),
+            .padding(vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Icon with colored background
@@ -273,14 +288,14 @@ fun ProfileMenuItem(
             modifier = Modifier
                 .size(48.dp)
                 .clip(RoundedCornerShape(24.dp))
-                .background(iconColor.copy(alpha = 0.1f)),
+                .background(iconColor.copy(alpha = 0.11f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 painter = painterResource(id = icon),
                 contentDescription = title,
                 tint = Color.Unspecified, // Remove tint to use original colors
-                modifier = Modifier.size(46.dp)
+                modifier = Modifier.size(45.dp)
             )
         }
 
@@ -289,20 +304,203 @@ fun ProfileMenuItem(
         // Menu item title
         Text(
             text = title,
-            style = MaterialTheme.typography.bodyLarge,
-            color = Color(0xFF1F2937),
-            fontWeight = FontWeight.Medium
+            fontFamily = Poppins,
+            fontWeight = FontWeight.SemiBold,
+            color = Purple80,
+            fontSize = 16.sp
         )
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // Arrow indicator
-        Icon(
-            imageVector = Icons.Default.KeyboardArrowRight,
-            contentDescription = "Navigate",
-            tint = Color(0xFF9CA3AF),
-            modifier = Modifier.size(20.dp)
+        // Arrow indicator - using simple text
+        Text(
+            text = "›",
+            color = TextMuted,
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Normal
         )
+    }
+}
+
+@Composable
+fun SettingsScreen(navController: NavController? = null) {
+    val context = LocalContext.current
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Clear All Data") },
+            text = { Text("This will delete all your transactions and reset the app. This action cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        // Clear user preferences
+                        UserPreferences.clearSession()
+                        UserPreferences.setInitialBalance(0.0)
+                        // Navigate back to launch
+                        navController?.navigate("launch") {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                ) {
+                    Text("Delete", color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Purple40)
+        ) {
+            // Header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 40.dp, start = 20.dp, end = 20.dp, bottom = 18.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = { 
+                    navController?.popBackStack()
+                }) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = SurfaceWhite,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                Text(
+                    text = "Settings",
+                    color = SurfaceWhite,
+                    fontFamily = Poppins,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
+                )
+                Spacer(modifier = Modifier.size(48.dp)) // Balance the layout
+            }
+        }
+        
+        // White card
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.79f)
+                .align(Alignment.BottomCenter)
+                .clip(RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp)),
+            colors = CardDefaults.cardColors(containerColor = SurfaceWhite)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp)
+            ) {
+                Text(
+                    text = "App Settings",
+                    color = Purple80,
+                    fontFamily = Poppins,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    modifier = Modifier.padding(bottom = 20.dp)
+                )
+                
+                // App Version
+                ProfileMenuItem(
+                    icon = R.drawable.ic_help,
+                    title = "App Version",
+                    iconColor = Purple80.copy(alpha = 0.3f),
+                    onClick = { }
+                )
+                
+                // Privacy Policy
+                ProfileMenuItem(
+                    icon = R.drawable.ic_security,
+                    title = "Privacy Policy",
+                    iconColor = Purple80.copy(alpha = 0.5f),
+                    onClick = { }
+                )
+                
+                // About
+                ProfileMenuItem(
+                    icon = R.drawable.ic_help,
+                    title = "About Bilance",
+                    iconColor = Purple80.copy(alpha = 0.7f),
+                    onClick = { }
+                )
+                
+                Spacer(modifier = Modifier.height(32.dp))
+                
+                Text(
+                    text = "Danger Zone",
+                    color = Color.Red,
+                    fontFamily = Poppins,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                
+                // Clear All Data
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showDeleteDialog = true },
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.Red.copy(alpha = 0.1f)
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(24.dp))
+                                .background(Color.Red.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_logout),
+                                contentDescription = "Clear Data",
+                                tint = Color.Red,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.width(16.dp))
+                        
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Clear All Data",
+                                fontFamily = Poppins,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.Red,
+                                fontSize = 16.sp
+                            )
+                            Text(
+                                text = "Delete all transactions and reset app",
+                                fontFamily = Poppins,
+                                color = Color.Red.copy(alpha = 0.7f),
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

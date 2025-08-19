@@ -9,7 +9,7 @@ import java.util.Date
 
 @Database(
     entities = [User::class, Transaction::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

@@ -105,107 +105,158 @@ fun NotificationScreen(
     }
 
 
-    Scaffold(
-        containerColor = Color(0xFFF5F7FA),
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        "Notification",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                    colors = listOf(
+                        com.example.bilance.ui.theme.GradientStart,
+                        com.example.bilance.ui.theme.GradientEnd
                     )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = Color.White
-                        )
-                    }
-                },
-                actions = {
+                )
+            )
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // Modern top bar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 50.dp, start = 24.dp, end = 24.dp, bottom = 20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = { navController.popBackStack() },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(com.example.bilance.ui.theme.TextOnPrimary.copy(alpha = 0.1f))
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = com.example.bilance.ui.theme.TextOnPrimary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                
+                Text(
+                    text = "Notifications",
+                    color = com.example.bilance.ui.theme.TextOnPrimary,
+                    fontSize = 20.sp,
+                    fontFamily = com.example.bilance.ui.theme.Poppins,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     if (isFilterApplied) {
-                        IconButton(onClick = {
-                            isFilterApplied = false
-                            Toast.makeText(context, "Filter cleared", Toast.LENGTH_SHORT).show()
-                        }) {
+                        IconButton(
+                            onClick = {
+                                isFilterApplied = false
+                                Toast.makeText(context, "Filter cleared", Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(com.example.bilance.ui.theme.AccentRed.copy(alpha = 0.15f))
+                        ) {
                             Icon(
                                 Icons.Default.Clear,
                                 contentDescription = "Clear Filter",
-                                tint = Color.White
+                                tint = com.example.bilance.ui.theme.AccentRed,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }
-                    IconButton(onClick = {
-                        showMonthPicker = true
-                    }) {
+                    IconButton(
+                        onClick = { showMonthPicker = true },
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(com.example.bilance.ui.theme.TextOnPrimary.copy(alpha = 0.1f))
+                    ) {
                         Icon(
                             Icons.Default.FilterList,
                             contentDescription = "Filter",
-                            tint = Color.White
+                            tint = com.example.bilance.ui.theme.TextOnPrimary,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF283A5F)
+                }
+            }
+            
+            // Modern card container
+            androidx.compose.material3.Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(horizontal = 20.dp),
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                colors = androidx.compose.material3.CardDefaults.cardColors(
+                    containerColor = com.example.bilance.ui.theme.BackgroundPrimary
+                ),
+                elevation = androidx.compose.material3.CardDefaults.cardElevation(
+                    defaultElevation = 16.dp
                 )
-            )
-        }
-    ) { padding ->
-
-        val filteredNotifications = if (isFilterApplied) {
-            viewModel.notifications.filter { sms ->
-                val cal = Calendar.getInstance().apply { time = sms.date }
-                cal.get(Calendar.MONTH) == selectedMonth && cal.get(Calendar.YEAR) == selectedYear
-            }
-        } else {
-            viewModel.notifications
-        }
-        
-        val grouped = filteredNotifications
-            .groupBy { sms ->
-                val now = Calendar.getInstance()
-                val smsDate = Calendar.getInstance().apply { time = sms.date }
-                when {
-                    now.get(Calendar.DAY_OF_YEAR) == smsDate.get(Calendar.DAY_OF_YEAR) -> "Today"
-                    now.get(Calendar.DAY_OF_YEAR) - 1 == smsDate.get(Calendar.DAY_OF_YEAR) -> "Yesterday"
-                    else -> "This Week"
+            ) {
+                val filteredNotifications = if (isFilterApplied) {
+                    viewModel.notifications.filter { sms ->
+                        val cal = Calendar.getInstance().apply { time = sms.date }
+                        cal.get(Calendar.MONTH) == selectedMonth && cal.get(Calendar.YEAR) == selectedYear
+                    }
+                } else {
+                    viewModel.notifications
                 }
-            }
-
-        LazyColumn(
-            modifier = Modifier
-                .padding(padding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            grouped.forEach { (section, smsItems) ->
-                item {
-                    Text(
-                        text = section,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF2D3748),
-                        modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp)
-                    )
-                }
-                items(smsItems) { sms ->
-                    NotificationCard(
-                        sms = sms,
-                        onAccept = {
-                            navController.navigate("transactionDetail/${sms.id}")
-                        },
-                        onReject = {
-                            viewModel.removeSMS(sms)
-                            Toast.makeText(context, "Notification removed", Toast.LENGTH_SHORT).show()
-                        },
-                        onClick = {
-                            navController.navigate("transactionDetail/${sms.id}")
+                
+                val grouped = filteredNotifications
+                    .groupBy { sms ->
+                        val now = Calendar.getInstance()
+                        val smsDate = Calendar.getInstance().apply { time = sms.date }
+                        when {
+                            now.get(Calendar.DAY_OF_YEAR) == smsDate.get(Calendar.DAY_OF_YEAR) -> "Today"
+                            now.get(Calendar.DAY_OF_YEAR) - 1 == smsDate.get(Calendar.DAY_OF_YEAR) -> "Yesterday"
+                            else -> "This Week"
                         }
-                    )
+                    }
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    grouped.forEach { (section, smsItems) ->
+                        item {
+                            Text(
+                                text = section,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                fontFamily = com.example.bilance.ui.theme.Poppins,
+                                color = com.example.bilance.ui.theme.TextPrimary,
+                                modifier = Modifier.padding(vertical = 16.dp, horizontal = 4.dp)
+                            )
+                        }
+                        items(smsItems) { sms ->
+                            NotificationCard(
+                                sms = sms,
+                                onAccept = {
+                                    navController.navigate("transactionDetail/${sms.id}")
+                                },
+                                onReject = {
+                                    viewModel.removeSMS(sms)
+                                    Toast.makeText(context, "Notification removed", Toast.LENGTH_SHORT).show()
+                                },
+                                onClick = {
+                                    navController.navigate("transactionDetail/${sms.id}")
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }

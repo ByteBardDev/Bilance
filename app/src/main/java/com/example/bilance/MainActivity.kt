@@ -12,11 +12,15 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.navigation.NavController
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +39,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -61,11 +68,14 @@ import com.example.bilance.viewmodel.TransactionViewModel
 import com.example.bilance.viewmodel.TransactionViewModelFactory
 import com.example.bilance.viewmodel.SMSViewModel
 import kotlinx.coroutines.delay
+import com.example.bilance.ui.SetupInitialBalanceScreen
+import java.util.Calendar
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        UserPreferences.init(applicationContext)
 
         // Request SMS permission
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) {
@@ -94,10 +104,15 @@ fun BilanceApp() {
 
     LaunchedEffect(Unit) {
         DatabaseUtils.createDemoUser(database)
-        DatabaseUtils.createSampleTransactions(database)
+        // Removed automatic creation of sample transactions
+        // Users should start with a clean slate
     }
 
-    NavHost(navController = navController, startDestination = "splash") {
+    val startDestination = remember {
+        val lastEmail = UserPreferences.getLoggedInEmail()
+        if (!lastEmail.isNullOrEmpty()) "home/$lastEmail" else "splash"
+    }
+    NavHost(navController = navController, startDestination = startDestination) {
     composable("splash") {
         SplashScreen(navController = navController)
     }
@@ -110,6 +125,7 @@ fun BilanceApp() {
     composable("login") {
         LoginScreen(
             onLoginSuccess = { email -> 
+                UserPreferences.setLoggedInEmail(email)
                 navController.navigate("home/$email") {
                     popUpTo("login") { inclusive = true }
                 }
@@ -120,11 +136,22 @@ fun BilanceApp() {
     composable("signup") {
         SignUpScreen(
             onSignUpSuccess = { email -> 
-                navController.navigate("home/$email") {
+                UserPreferences.setLoggedInEmail(email)
+                navController.navigate("setupBalance/$email") {
                     popUpTo("signup") { inclusive = true }
                 }
             },
             onLoginClick = { navController.navigate("login") }
+        )
+    }
+    composable("setupBalance/{email}") { backStackEntry ->
+        val email = backStackEntry.arguments?.getString("email") ?: ""
+        SetupInitialBalanceScreen(
+            onDone = {
+                navController.navigate("home/$email") {
+                    popUpTo("setupBalance/$email") { inclusive = true }
+                }
+            }
         )
     }
     composable("home/{email}") { backStackEntry ->
@@ -154,38 +181,354 @@ fun BilanceApp() {
         composable("addCustomCategory") {
             AddCustomCategoryScreen(navController = navController)
         }
+        composable("settings") {
+            SettingsScreen(navController = navController)
+        }
     }
 }
 
 @Composable
-fun HomeScreen() {
-    // This is now the greeting screen content
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Main content area
-            Box(
-                modifier = Modifier
-                    .weight(1f)
+fun HomeScreen(
+    userEmail: String = "",
+    sharedTransactionViewModel: TransactionViewModel
+) {
+    val context = LocalContext.current
+    val database = remember { BilanceDatabase.getDatabase(context) }
+    
+    // Get real data from ViewModel
+    val transactions by sharedTransactionViewModel.transactions.collectAsState()
+    val totalIncome by sharedTransactionViewModel.totalIncome.collectAsState()
+    val totalExpense by sharedTransactionViewModel.totalExpense.collectAsState()
+    val totalBalance by sharedTransactionViewModel.totalBalance.collectAsState()
+    
+    // User data
+    var userName by remember { mutableStateOf("User") }
+    var userNotificationCount by remember { mutableStateOf(0) }
+    
+    // Load user data and SMS count
+    LaunchedEffect(userEmail) {
+        try {
+            val user = if (userEmail.isNotEmpty()) {
+                database.userDao().getUserByEmail(userEmail)
+            } else {
+                database.userDao().getUserByEmail("demo@bilance.com")
+            }
+            userName = user?.fullName?.split(" ")?.firstOrNull() ?: "User"
+            
+            // Get SMS notification count
+            val smsViewModel = SMSViewModel(context.contentResolver)
+            userNotificationCount = smsViewModel.notifications.size
+        } catch (e: Exception) {
+            userName = "User"
+        }
+    }
+    
+    // Get current time greeting
+    val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+    val greeting = when (currentHour) {
+        in 0..11 -> "Good morning"
+        in 12..16 -> "Good afternoon"
+        else -> "Good evening"
+    }
+    
+    // Calculate category expenses
+    val categoryExpenses = remember(transactions) {
+        transactions
+            .filter { it.amountType == "expense" }
+            .groupBy { it.category }
+            .mapValues { (_, list: List<com.example.bilance.data.Transaction>) -> 
+                list.sumOf { transaction -> transaction.amount } 
+            }
+            .toList()
+            .sortedByDescending { (_, amount: Double) -> amount }
+            .take(4)
+    }
+
+    // Modern gradient background
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                    colors = listOf(
+                        GradientStart,
+                        GradientEnd
+                    )
+                )
+            )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 0.dp, vertical = 0.dp)
+        ) {
+            Spacer(modifier = Modifier.height(40.dp))
+            
+            // Modern top greeting section with real user data
+            Row(
+                Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFFF8F9FA))
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
+                    .padding(horizontal = 24.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                Column(verticalArrangement = Arrangement.Center) {
+                    Text(
+                        text = greeting,
+                        color = TextOnPrimary.copy(alpha = 0.8f),
+                        fontFamily = LeagueSpartan,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 16.sp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = userName,
+                        color = TextOnPrimary,
+                        fontFamily = Poppins,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 24.sp
+                    )
+                }
+                
+                // Modern profile avatar with notification badge
+                Box(
+                    modifier = Modifier.size(56.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        Modifier
+                            .size(56.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(
+                                brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                                    colors = listOf(
+                                        TextOnPrimary.copy(alpha = 0.2f),
+                                        TextOnPrimary.copy(alpha = 0.1f)
+                                    )
+                                )
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = TextOnPrimary.copy(alpha = 0.3f),
+                                shape = RoundedCornerShape(20.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_user),
+                            contentDescription = "Profile",
+                            tint = TextOnPrimary,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                    
+                    // Notification badge with real count
+                    if (userNotificationCount > 0) {
+                        Box(
+                            modifier = Modifier
+                                .size(16.dp)
+                                .offset(x = 8.dp, y = (-8).dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(AccentRed)
+                                .align(Alignment.TopEnd),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = userNotificationCount.toString(),
+                                color = TextOnPrimary,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = Poppins
+                            )
+                        }
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            // Modern balance card with real data
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .height(200.dp),
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = CardBackground
+                ),
+                elevation = CardDefaults.cardElevation(
+                    defaultElevation = 16.dp
+                )
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    // Gradient overlay for modern look
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                                    colors = listOf(
+                                        PrimaryBlue.copy(alpha = 0.05f),
+                                        SecondaryPurple.copy(alpha = 0.03f)
+                                    )
+                                )
+                            )
+                    )
+                    
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(28.dp),
+                        horizontalAlignment = Alignment.Start,
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        // Top section with real balance
+                        Column {
+                            Text(
+                                text = "Total Balance",
+                                color = TextSecondary,
+                                fontFamily = Poppins,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 16.sp
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "₹${String.format("%,.2f", totalBalance)}",
+                                color = TextPrimary,
+                                fontFamily = Poppins,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 36.sp
+                            )
+                        }
+                        
+                        // Bottom section with real income/expense
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            // Income card with real data
+                            Card(
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = AccentGreen.copy(alpha = 0.1f)
+                                ),
+                                elevation = CardDefaults.cardElevation(0.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    horizontalAlignment = Alignment.Start
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_trending_up),
+                                            contentDescription = "Income",
+                                            tint = AccentGreen,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            "Income",
+                                            color = AccentGreen,
+                                            fontFamily = Poppins,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        "₹${String.format("%,.0f", totalIncome)}",
+                                        color = AccentGreen,
+                                        fontFamily = Poppins,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 16.sp
+                                    )
+                                }
+                            }
+                            
+                            Spacer(modifier = Modifier.width(12.dp))
+                            
+                            // Expense card with real data
+                            Card(
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = AccentRed.copy(alpha = 0.1f)
+                                ),
+                                elevation = CardDefaults.cardElevation(0.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    horizontalAlignment = Alignment.Start
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_trending_down),
+                                            contentDescription = "Expense",
+                                            tint = AccentRed,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            "Expense",
+                                            color = AccentRed,
+                                            fontFamily = Poppins,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        "₹${String.format("%,.0f", totalExpense)}",
+                                        color = AccentRed,
+                                        fontFamily = Poppins,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 16.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            // Category expenses section
+            if (categoryExpenses.isNotEmpty()) {
                 Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
                 ) {
                     Text(
-                        text = "Welcome to Bilance!",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = Color(0xFF283A5F),
-                        modifier = Modifier.padding(bottom = 16.dp)
+                        text = "Category Spending",
+                        color = TextOnPrimary,
+                        fontFamily = Poppins,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 18.sp
                     )
-                    Text(
-                        text = "Your personal finance manager",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Gray
-                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        categoryExpenses.forEach { (category, amount) ->
+                            HomeCategoryItem(
+                                categoryName = category,
+                                amount = amount,
+                                totalExpense = totalExpense
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -193,26 +536,575 @@ fun HomeScreen() {
 }
 
 @Composable
-fun AnalyticsScreen() {
-    Column(
+fun HomeCategoryItem(
+    categoryName: String,
+    amount: Double,
+    totalExpense: Double
+) {
+    val percentage = if (totalExpense > 0) ((amount / totalExpense) * 100).toInt() else 0
+    val iconRes = when (categoryName.lowercase()) {
+        "food", "food & dining" -> R.drawable.ic_food
+        "groceries" -> R.drawable.ic_groceries
+        "transport", "transportation" -> R.drawable.ic_transport
+        "rent" -> R.drawable.ic_rent
+        "salary" -> R.drawable.ic_salary
+        else -> R.drawable.ic_layers
+    }
+    
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = TextOnPrimary.copy(alpha = 0.1f)
+        ),
+        elevation = CardDefaults.cardElevation(0.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(AccentOrange.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(id = iconRes),
+                    contentDescription = categoryName,
+                    tint = AccentOrange,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = categoryName,
+                    color = TextOnPrimary,
+                    fontFamily = Poppins,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 14.sp
+                )
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                Text(
+                    text = "$percentage% of expenses",
+                    color = TextOnPrimary.copy(alpha = 0.7f),
+                    fontFamily = Poppins,
+                    fontSize = 12.sp
+                )
+            }
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
+            Text(
+                text = "₹${String.format("%,.0f", amount)}",
+                color = TextOnPrimary,
+                fontFamily = Poppins,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp
+            )
+        }
+    }
+}
+
+
+
+@Composable
+fun AnalyticsScreen(sharedTransactionViewModel: TransactionViewModel) {
+    // Get real data from ViewModel
+    val transactions by sharedTransactionViewModel.transactions.collectAsState()
+    val totalExpense by sharedTransactionViewModel.totalExpense.collectAsState()
+    val totalIncome by sharedTransactionViewModel.totalIncome.collectAsState()
+    val expensePercentage by sharedTransactionViewModel.expensePercentage.collectAsState()
+    
+    // State for selected month/year
+    var selectedMonth by remember { mutableStateOf(Calendar.getInstance().get(Calendar.MONTH)) }
+    var selectedYear by remember { mutableStateOf(Calendar.getInstance().get(Calendar.YEAR)) }
+    var showMonthPicker by remember { mutableStateOf(false) }
+    
+    // Get available months from transactions
+    val availableMonths = remember(transactions) {
+        transactions.groupBy { transaction ->
+            val calendar = Calendar.getInstance().apply { time = transaction.date }
+            "${calendar.get(Calendar.YEAR)}-${calendar.get(Calendar.MONTH)}"
+        }.keys.map { key ->
+            val parts = key.split("-")
+            Pair(parts[0].toInt(), parts[1].toInt())
+        }.sortedByDescending { "${it.first}-${String.format("%02d", it.second)}" }
+    }
+    
+    // Calculate selected month expenses
+    val selectedMonthExpenses = remember(transactions, selectedMonth, selectedYear) {
+        transactions.filter { transaction ->
+            val calendar = Calendar.getInstance().apply { time = transaction.date }
+            calendar.get(Calendar.MONTH) == selectedMonth && 
+            calendar.get(Calendar.YEAR) == selectedYear &&
+            transaction.amountType == "expense"
+        }.sumOf { it.amount }
+    }
+    
+    // Calculate selected month income  
+    val selectedMonthIncome = remember(transactions, selectedMonth, selectedYear) {
+        transactions.filter { transaction ->
+            val calendar = Calendar.getInstance().apply { time = transaction.date }
+            calendar.get(Calendar.MONTH) == selectedMonth && 
+            calendar.get(Calendar.YEAR) == selectedYear &&
+            transaction.amountType == "income"
+        }.sumOf { it.amount }
+    }
+    
+    // Calculate category breakdown for selected month
+    val categoryBreakdown = remember(transactions, selectedMonth, selectedYear) {
+        transactions
+            .filter { transaction ->
+                val calendar = Calendar.getInstance().apply { time = transaction.date }
+                calendar.get(Calendar.MONTH) == selectedMonth && 
+                calendar.get(Calendar.YEAR) == selectedYear &&
+                transaction.amountType == "expense"
+            }
+            .groupBy { it.category }
+            .mapValues { (_, list: List<com.example.bilance.data.Transaction>) -> 
+                list.sumOf { transaction -> transaction.amount } 
+            }
+            .toList()
+            .sortedByDescending { (_, amount: Double) -> amount }
+            .take(5)
+            .map { (category: String, amount: Double) ->
+                val percentage = if (selectedMonthExpenses > 0) ((amount / selectedMonthExpenses) * 100).toInt() else 0
+                CategoryAnalyticsData(
+                    categoryName = category,
+                    amount = amount,
+                    percentage = percentage
+                )
+            }
+    }
+    
+    // Calculate budget progress based on initial balance and income
+    val initialBalance = UserPreferences.getInitialBalance()
+    val budgetBase = initialBalance + totalIncome
+    val budgetProgress = if (budgetBase > 0) ((totalExpense / budgetBase) * 100).toInt() else 0
+
+    // Month picker dialog
+    if (showMonthPicker) {
+        AlertDialog(
+            onDismissRequest = { showMonthPicker = false },
+            title = { Text("Select Month") },
+            text = {
+                LazyColumn {
+                    items(availableMonths.size) { index ->
+                        val (year, month) = availableMonths[index]
+                        TextButton(
+                            onClick = {
+                                selectedMonth = month
+                                selectedYear = year
+                                showMonthPicker = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "${getMonthName(month)} $year",
+                                color = if (month == selectedMonth && year == selectedYear) 
+                                    PrimaryBlue else TextPrimary
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showMonthPicker = false }) {
+                    Text("Close")
+                }
+            }
+        )
+    }
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF8F9FA))
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .background(BackgroundPrimary)
     ) {
-        Text(
-            "Analytics Screen",
-            style = MaterialTheme.typography.headlineMedium,
-            color = Color(0xFF283A5F)
-        )
-        Text(
-            "View your spending analytics here",
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.Gray,
-            modifier = Modifier.padding(top = 8.dp)
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp)
+        ) {
+            Spacer(modifier = Modifier.height(40.dp))
+            
+            // Header
+            Text(
+                text = "Analytics",
+                color = TextPrimary,
+                fontFamily = Poppins,
+                fontWeight = FontWeight.Bold,
+                fontSize = 28.sp
+            )
+            
+            Text(
+                text = "Track your spending patterns",
+                color = TextSecondary,
+                fontFamily = Poppins,
+                fontWeight = FontWeight.Normal,
+                fontSize = 16.sp,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Month selector
+            if (availableMonths.isNotEmpty()) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showMonthPicker = true },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = CardBackground
+                    ),
+                    elevation = CardDefaults.cardElevation(4.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "${getMonthName(selectedMonth)} $selectedYear",
+                            color = TextPrimary,
+                            fontFamily = Poppins,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 16.sp
+                        )
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = "Select Month",
+                            tint = TextSecondary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Real spending overview card
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = CardBackground
+                ),
+                elevation = CardDefaults.cardElevation(
+                    defaultElevation = 8.dp
+                )
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    // Gradient background
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                                    colors = listOf(
+                                        SecondaryPurple.copy(alpha = 0.1f),
+                                        PrimaryBlue.copy(alpha = 0.05f)
+                                    )
+                                )
+                            )
+                    )
+                    
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "${getMonthName(selectedMonth)} $selectedYear",
+                                    color = TextSecondary,
+                                    fontFamily = Poppins,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = "₹${String.format("%,.2f", selectedMonthExpenses)}",
+                                    color = TextPrimary,
+                                    fontFamily = Poppins,
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            
+                            Box(
+                                modifier = Modifier
+                                    .size(60.dp)
+                                    .clip(RoundedCornerShape(30.dp))
+                                    .background(
+                                        if (budgetProgress > 80) AccentRed.copy(alpha = 0.15f) 
+                                        else AccentGreen.copy(alpha = 0.15f)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (budgetProgress > 80) R.drawable.ic_trending_down 
+                                            else R.drawable.ic_trending_up
+                                    ),
+                                    contentDescription = "Spending trend",
+                                    tint = if (budgetProgress > 80) AccentRed else AccentGreen,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                        }
+                        
+                        // Real progress indicator
+                        Column {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "Budget Progress",
+                                    color = TextSecondary,
+                                    fontFamily = Poppins,
+                                    fontSize = 12.sp
+                                )
+                                Text(
+                                    text = "${budgetProgress}%",
+                                    color = if (budgetProgress > 80) AccentRed else AccentGreen,
+                                    fontFamily = Poppins,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(8.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(BorderColor)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth((budgetProgress / 100f).coerceAtMost(1f))
+                                        .fillMaxHeight()
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(if (budgetProgress > 80) AccentRed else AccentGreen)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Category breakdown with real data
+            if (categoryBreakdown.isNotEmpty()) {
+                Text(
+                    text = "Top Categories",
+                    color = TextPrimary,
+                    fontFamily = Poppins,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 18.sp
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Real category items
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    categoryBreakdown.forEach { categoryData ->
+                        val iconRes = when (categoryData.categoryName.lowercase()) {
+                            "food", "food & dining" -> R.drawable.ic_food
+                            "groceries" -> R.drawable.ic_groceries
+                            "transport", "transportation" -> R.drawable.ic_transport
+                            "rent" -> R.drawable.ic_rent
+                            "salary" -> R.drawable.ic_salary
+                            else -> R.drawable.ic_layers
+                        }
+                        
+                        val color = when (categoryData.categoryName.lowercase()) {
+                            "food", "food & dining" -> AccentOrange
+                            "transport", "transportation" -> PrimaryBlue
+                            "groceries" -> SecondaryPurple
+                            "rent" -> AccentRed
+                            else -> AccentGreen
+                        }
+                        
+                        CategoryAnalyticsItem(
+                            categoryName = categoryData.categoryName,
+                            amount = "₹${String.format("%,.0f", categoryData.amount)}",
+                            percentage = categoryData.percentage,
+                            color = color,
+                            iconRes = iconRes
+                        )
+                    }
+                }
+            } else {
+                // Show message when no expense data
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "No expense data available",
+                        color = TextSecondary,
+                        fontFamily = Poppins,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 16.sp
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Start adding transactions to see analytics",
+                        color = TextMuted,
+                        fontFamily = Poppins,
+                        fontSize = 14.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+data class CategoryAnalyticsData(
+    val categoryName: String,
+    val amount: Double,
+    val percentage: Int
+)
+
+fun getMonthName(month: Int): String {
+    return when (month) {
+        Calendar.JANUARY -> "January"
+        Calendar.FEBRUARY -> "February"
+        Calendar.MARCH -> "March"
+        Calendar.APRIL -> "April"
+        Calendar.MAY -> "May"
+        Calendar.JUNE -> "June"
+        Calendar.JULY -> "July"
+        Calendar.AUGUST -> "August"
+        Calendar.SEPTEMBER -> "September"
+        Calendar.OCTOBER -> "October"
+        Calendar.NOVEMBER -> "November"
+        Calendar.DECEMBER -> "December"
+        else -> "Unknown"
+    }
+}
+
+@Composable
+fun CategoryAnalyticsItem(
+    categoryName: String,
+    amount: String,
+    percentage: Int,
+    color: Color,
+    iconRes: Int
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = CardBackground
+        ),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(color.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(id = iconRes),
+                    contentDescription = categoryName,
+                    tint = color,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = categoryName,
+                    color = TextPrimary,
+                    fontFamily = Poppins,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 14.sp
+                )
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(BorderColor)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(percentage / 100f)
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(color)
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
+            Column(
+                horizontalAlignment = Alignment.End
+            ) {
+                Text(
+                    text = amount,
+                    color = TextPrimary,
+                    fontFamily = Poppins,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp
+                )
+                Text(
+                    text = "$percentage%",
+                    color = TextSecondary,
+                    fontFamily = Poppins,
+                    fontSize = 12.sp
+                )
+            }
+        }
     }
 }
 
@@ -231,78 +1123,151 @@ fun NotificationsTabScreen(navController: NavController) {
 
 @Composable
 fun BottomNavBar(currentTab: String, onTabSelected: (String) -> Unit) {
-    Box(
+    val activeColor = PrimaryBlue
+    val inactiveColor = TextMuted
+    val bgColor = SurfaceElevated
+    val selectedLabelColor = PrimaryBlue
+    val navItems = listOf(
+        NavTabItem("home", "Home", R.drawable.ic_home),
+        NavTabItem("analytics", "Analytics", R.drawable.ic_chart),
+        NavTabItem("transaction", "Transactions", R.drawable.ic_transfer),
+        NavTabItem("categories", "Categories", R.drawable.ic_layers),
+        NavTabItem("profile", "Profile", R.drawable.ic_user),
+    )
+    
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(80.dp)
-            .clip(RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp))
-            .background(Color(0xFFC8D5E8)) // Light blue-gray background
+            .height(88.dp),
+        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = bgColor
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 16.dp
+        )
     ) {
         Row(
-            modifier = Modifier.fillMaxSize(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Home Icon
-            NavBarItem(
-                icon = Icons.Default.Home,
-                isSelected = currentTab == "home",
-                onClick = { onTabSelected("home") }
-            )
-            
-            // Analytics Icon
-            NavBarItem(
-                icon = Icons.Default.Analytics,
-                isSelected = currentTab == "analytics",
-                onClick = { onTabSelected("analytics") }
-            )
-            
-            // Transaction Icon (arrows) - Middle position
-            NavBarItem(
-                icon = Icons.Default.SwapHoriz,
-                isSelected = currentTab == "transaction",
-                onClick = { onTabSelected("transaction") }
-            )
-            
-            // Categories Icon - 4th position
-            NavBarItem(
-                icon = Icons.Default.Layers,
-                isSelected = currentTab == "categories",
-                onClick = { onTabSelected("categories") }
-            )
-            
-            // Profile Icon
-            NavBarItem(
-                icon = Icons.Default.Person,
-                isSelected = currentTab == "profile",
-                onClick = { onTabSelected("profile") }
-            )
+            navItems.forEach { item ->
+                val isSelected = currentTab == item.route
+                ModernNavBarItem(
+                    iconRes = item.iconRes,
+                    label = item.label,
+                    isSelected = isSelected,
+                    onClick = { onTabSelected(item.route) },
+                    activeColor = activeColor,
+                    inactiveColor = inactiveColor,
+                    selectedLabelColor = selectedLabelColor
+                )
+            }
         }
     }
 }
 
+data class NavTabItem(
+    val route: String,
+    val label: String,
+    val iconRes: Int
+)
+
 @Composable
-fun NavBarItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+fun ModernNavBarItem(
+    iconRes: Int,
+    label: String,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    activeColor: Color,
+    inactiveColor: Color,
+    selectedLabelColor: Color
 ) {
-    Box(
+    Column(
         modifier = Modifier
-            .size(48.dp)
-            .clip(RoundedCornerShape(24.dp))
-            .background(
-                if (isSelected) Color(0xFF283A5F) // Dark blue for selected
-                else Color.Transparent
+            .clickable(
+                onClick = onClick,
+                indication = null,
+                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
             )
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = if (isSelected) Color.White else Color(0xFF283A5F),
-            modifier = Modifier.size(24.dp)
+        // Modern pill-shaped background for selected item
+        Box(
+            modifier = Modifier
+                .size(width = 56.dp, height = 32.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(
+                    if (isSelected) 
+                        activeColor.copy(alpha = 0.12f) 
+                    else 
+                        Color.Transparent
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                painter = painterResource(id = iconRes),
+                contentDescription = label,
+                tint = if (isSelected) activeColor else inactiveColor,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(4.dp))
+        
+        Text(
+            text = label,
+            color = if (isSelected) selectedLabelColor else inactiveColor,
+            fontSize = 11.sp,
+            fontFamily = Poppins,
+            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+fun NavBarItemFigma(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    activeColor: Color,
+    inactiveColor: Color,
+    selectedLabelColor: Color
+) {
+    val circleSize = if (isSelected) 44.dp else 44.dp
+    Column(
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .padding(top = 0.dp, bottom = 0.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .size(circleSize)
+                .clip(RoundedCornerShape(22.dp))
+                .background(if (isSelected) activeColor else Color.Transparent),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = if (isSelected) SurfaceWhite else inactiveColor,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+        Text(
+            text = label,
+            color = if (isSelected) selectedLabelColor else inactiveColor,
+            fontSize = 12.sp, // Figma: typically 12sp
+            fontFamily = Poppins,
+            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+            modifier = Modifier.padding(top = 2.dp)
         )
     }
 }
@@ -310,7 +1275,7 @@ fun NavBarItem(
 @Composable
 fun SplashScreen(navController: NavController) {
     LaunchedEffect(Unit) {
-        delay(3000)
+        delay(2000)
         navController.navigate("launch") {
             popUpTo("splash") { inclusive = true }
         }
@@ -319,36 +1284,76 @@ fun SplashScreen(navController: NavController) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(SplashBackgroundBlue)
-    ) {
-        // Apply overlay effects
-        repeat(3) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(SplashOverlayBlack)
+            .background(
+                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                    colors = listOf(
+                        GradientStart,
+                        GradientEnd
+                    )
+                )
             )
-        }
+    ) {
+        // Modern gradient overlay for depth
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                        colors = listOf(
+                            PrimaryBlue.copy(alpha = 0.1f),
+                            SecondaryPurple.copy(alpha = 0.05f)
+                        ),
+                        radius = 800f
+                    )
+                )
+        )
         
-        // Center the logo
         Column(
             modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Logo container
+            // Modern logo container with subtle glow effect
             Box(
                 modifier = Modifier
-                    .width(336.dp)
-                    .height(174.dp),
+                    .size(200.dp)
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                            colors = listOf(
+                                TextOnPrimary.copy(alpha = 0.1f),
+                                Color.Transparent
+                            ),
+                            radius = 100f
+                        ),
+                        shape = RoundedCornerShape(100.dp)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.logo_white),
                     contentDescription = "Bilance Logo",
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.size(180.dp)
                 )
             }
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            // Modern loading indicator
+            CircularProgressIndicator(
+                color = TextOnPrimary.copy(alpha = 0.8f),
+                strokeWidth = 2.dp,
+                modifier = Modifier.size(32.dp)
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Text(
+                text = "Loading...",
+                color = TextOnPrimary.copy(alpha = 0.8f),
+                fontFamily = Poppins,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
         }
     }
 }
@@ -361,97 +1366,119 @@ fun LaunchScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(LaunchBackgroundLight)
+            .background(BackgroundPrimary)
     ) {
-        // Center all content
         Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Logo section
+            // Modern logo container with light background
             Box(
                 modifier = Modifier
-                    .width(335.dp)
-                    .height(174.dp),
+                    .size(200.dp)
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                            colors = listOf(
+                                PrimaryBlue.copy(alpha = 0.05f),
+                                Color.Transparent
+                            ),
+                            radius = 100f
+                        ),
+                        shape = RoundedCornerShape(100.dp)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.logo),
                     contentDescription = "Bilance Logo",
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.size(160.dp)
                 )
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Tagline text
-            Text(
-                text = "One App. All Your Transactions. Zero Noise.",
-                color = LaunchTextDark,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Normal,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .width(268.dp)
-                    .padding(horizontal = 16.dp)
-            )
-
+            
             Spacer(modifier = Modifier.height(32.dp))
-
-            // Log In Button
+            
+            // Modern tagline with better typography
+            Text(
+                text = "One App. All Your Transactions.",
+                color = TextPrimary,
+                fontFamily = Poppins,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 32.dp)
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Text(
+                text = "Zero Noise.",
+                color = TextSecondary,
+                fontFamily = LeagueSpartan,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Normal,
+                textAlign = TextAlign.Center
+            )
+            
+            Spacer(modifier = Modifier.height(48.dp))
+            
+            // Modern buttons with consistent design
             Button(
                 onClick = onLoginClick,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = LaunchButtonBlue,
-                    contentColor = LaunchTextLight
+                    containerColor = PrimaryBlue,
+                    contentColor = TextOnPrimary
                 ),
-                shape = RoundedCornerShape(30.dp),
+                shape = RoundedCornerShape(16.dp),
+                elevation = ButtonDefaults.buttonElevation(
+                    defaultElevation = 4.dp,
+                    pressedElevation = 8.dp
+                ),
                 modifier = Modifier
-                    .width(207.dp)
-                    .height(45.dp)
+                    .width(280.dp)
+                    .height(56.dp)
             ) {
                 Text(
                     text = "Log In",
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.SemiBold,
+                    fontFamily = Poppins
                 )
             }
-
+            
             Spacer(modifier = Modifier.height(16.dp))
-
-            // Sign Up Button
+            
             OutlinedButton(
                 onClick = onSignUpClick,
                 colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = LaunchButtonLight,
-                    contentColor = LaunchTextBlue
+                    containerColor = Color.Transparent,
+                    contentColor = PrimaryBlue
                 ),
-                shape = RoundedCornerShape(30.dp),
+                border = BorderStroke(2.dp, PrimaryBlue),
+                shape = RoundedCornerShape(16.dp),
                 modifier = Modifier
-                    .width(207.dp)
-                    .height(45.dp)
+                    .width(280.dp)
+                    .height(56.dp)
             ) {
                 Text(
                     text = "Sign Up",
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    fontFamily = Poppins
                 )
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Forgot Password link
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
             Text(
                 text = "Forgot Password?",
-                color = LaunchLinkText,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Normal,
+                color = TextSecondary,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                fontFamily = Poppins,
                 textDecoration = TextDecoration.Underline,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.clickable { 
-                    // Handle forgot password action
-                }
+                modifier = Modifier.clickable { /* TODO */ }
             )
         }
     }
@@ -473,8 +1500,8 @@ fun MainNavApp(navController: NavController, userEmail: String = "", sharedTrans
         Column(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.weight(1f)) {
                 when (currentTab) {
-                    "home" -> HomeScreen()
-                    "analytics" -> AnalyticsScreen()
+                    "home" -> HomeScreen(userEmail = userEmail, sharedTransactionViewModel = sharedTransactionViewModel)
+                    "analytics" -> AnalyticsScreen(sharedTransactionViewModel = sharedTransactionViewModel)
                     "transaction" -> TransactionScreen(navController = navController, viewModel = sharedTransactionViewModel)
                     "categories" -> CategoriesScreen(viewModel = sharedTransactionViewModel, navController = navController)
                     "profile" -> ProfileScreen(navController = navController, userEmail = userEmail)
