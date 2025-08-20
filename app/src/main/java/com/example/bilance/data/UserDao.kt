@@ -3,6 +3,7 @@ package com.example.bilance.data
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 
 @Dao
 interface UserDao {
@@ -20,4 +21,7 @@ interface UserDao {
 
     @Insert
     suspend fun registerUser(user: User): Long
+
+    @Update
+    suspend fun updateUser(user: User)
 } 

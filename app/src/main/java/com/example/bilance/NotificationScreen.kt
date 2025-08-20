@@ -33,7 +33,9 @@ import java.util.*
 @Composable
 fun NotificationScreen(
     viewModel: SMSViewModel,
-    navController: NavController
+    navController: NavController,
+    sourceTab: String = "home",
+    userEmail: String = ""
 ) {
     val context = LocalContext.current
     val months = listOf(

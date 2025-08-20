@@ -13,6 +13,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -38,6 +40,8 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.ColorFilter
 import com.example.bilance.data.BilanceDatabase
 import com.example.bilance.ui.IconUtils
 import com.example.bilance.ui.theme.BilanceTheme
@@ -81,7 +85,17 @@ fun TransactionScreen(
     val totalExpense by viewModel.totalExpense.collectAsState()
     val totalBalance by viewModel.totalBalance.collectAsState()
     val expensePercentage by viewModel.expensePercentage.collectAsState()
-    val expenseBase = remember(totalIncome) { UserPreferences.getInitialBalance() + totalIncome }
+    
+    // Fix: Calculate expense base correctly
+    val initialBalance = remember { UserPreferences.getInitialBalance() }
+    val expenseBase = remember(initialBalance, totalIncome) { 
+        initialBalance + totalIncome 
+    }
+    
+    // Fix: Calculate actual balance including initial balance
+    val actualBalance = remember(initialBalance, totalIncome, totalExpense) {
+        initialBalance + totalIncome - totalExpense
+    }
     
     // SMS ViewModel for unprocessed transactions
     val smsViewModel = remember { SMSViewModel(context.contentResolver) }
@@ -117,19 +131,14 @@ fun TransactionScreen(
         viewModel.loadTransactions()
     }
     
-    // Debug logging for transactions
-    LaunchedEffect(transactions) {
-        println("DEBUG: TransactionScreen - Transactions updated: ${transactions.size} transactions")
-        println("DEBUG: TransactionScreen - Transaction titles: ${transactions.map { it.title }}")
-        println("DEBUG: TransactionScreen - ViewModel instance: ${viewModel.hashCode()}")
-    }
-    
-    // Debug logging for transactionsByMonth
-    LaunchedEffect(transactionsByMonth) {
-        println("DEBUG: TransactionScreen - transactionsByMonth updated: ${transactionsByMonth.size} months")
-        transactionsByMonth.forEach { (month: String, transactions: List<com.example.bilance.data.Transaction>) ->
-            println("DEBUG: TransactionScreen - Month: $month, Transactions: ${transactions.size}")
-        }
+    // Debug logging for balance calculations
+    LaunchedEffect(actualBalance, totalBalance, totalIncome, totalExpense) {
+        println("DEBUG: Balance calculations:")
+        println("  Initial Balance: $initialBalance")
+        println("  Total Income: $totalIncome")
+        println("  Total Expense: $totalExpense")
+        println("  ViewModel Balance: $totalBalance")
+        println("  Calculated Balance: $actualBalance")
     }
 
     Box(
@@ -182,17 +191,21 @@ fun TransactionScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     IconButton(
-                        onClick = { navController?.navigate("notifications") },
+                        onClick = {
+                            if (navController != null) {
+                                navController.navigate("notifications_from_transactions")
+                            }
+                        },
                         modifier = Modifier
                             .size(40.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(com.example.bilance.ui.theme.AccentOrange.copy(alpha = 0.15f))
+                            .background(com.example.bilance.ui.theme.TextOnPrimary.copy(alpha = 0.1f))
                     ) {
                         Icon(
-                            painter = painterResource(id = R.drawable.ic_bell),
+                            imageVector = Icons.Default.Notifications,
                             contentDescription = "Notifications",
-                            tint = com.example.bilance.ui.theme.AccentOrange,
-                            modifier = Modifier.size(18.dp)
+                            tint = com.example.bilance.ui.theme.TextOnPrimary,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                     
@@ -204,18 +217,18 @@ fun TransactionScreen(
                             .background(com.example.bilance.ui.theme.TextOnPrimary.copy(alpha = 0.1f))
                     ) {
                         Icon(
-                            painter = painterResource(id = R.drawable.ic_chart),
+                            imageVector = Icons.Default.Refresh,
                             contentDescription = "Refresh",
                             tint = com.example.bilance.ui.theme.TextOnPrimary,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
             }
 
-            // Header styled like the reference
+            // Header styled like the reference - Fix: Use actualBalance instead of totalBalance
             AccountBalanceHeader(
-                totalBalance = totalBalance,
+                totalBalance = actualBalance, // Use calculated balance
                 totalExpense = totalExpense,
                 totalIncome = totalIncome,
                 expensePercentage = expensePercentage,
@@ -243,7 +256,7 @@ fun TransactionScreen(
                             fontSize = 16.sp
                         )
                         TextButton(
-                            onClick = { navController?.navigate("notifications") }
+                            onClick = { navController?.navigate("notifications_from_transactions") }
                         ) {
                             Text(
                                 text = "View All",
@@ -466,9 +479,14 @@ fun AccountBalanceHeader(
                     fontFamily = Poppins,
                     fontWeight = FontWeight.Medium
                 )
+                // Fix: Format balance properly and handle negative values
                 Text(
-                    text = "₹${String.format("%,.2f", totalBalance)}",
-                    color = SurfaceWhite,
+                    text = if (totalBalance >= 0) {
+                        "₹${String.format("%,.2f", totalBalance)}"
+                    } else {
+                        "-₹${String.format("%,.2f", kotlin.math.abs(totalBalance))}"
+                    },
+                    color = if (totalBalance >= 0) SurfaceWhite else com.example.bilance.ui.theme.AccentRed,
                     fontSize = 28.sp,
                     fontFamily = Poppins,
                     fontWeight = FontWeight.Bold
@@ -483,7 +501,7 @@ fun AccountBalanceHeader(
                     fontWeight = FontWeight.Medium
                 )
                 Text(
-                    text = "-₹${String.format("%,.2f", totalExpense)}",
+                    text = "₹${String.format("%,.2f", totalExpense)}", // Remove negative sign since it's already labeled as expense
                     color = Purple80,
                     fontSize = 28.sp,
                     fontFamily = Poppins,
