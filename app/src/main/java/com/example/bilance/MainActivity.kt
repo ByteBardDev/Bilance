@@ -187,8 +187,19 @@ fun BilanceApp() {
             val email = backStackEntry.arguments?.getString("email") ?: ""
             SetupInitialBalanceScreen(
                 onDone = {
-                    navController.navigate("home/$email") {
+                    navController.navigate("setupExpenseThreshold/$email") {
                         popUpTo("setupBalance/$email") { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable("setupExpenseThreshold/{email}") { backStackEntry ->
+            val email = backStackEntry.arguments?.getString("email") ?: ""
+            com.example.bilance.ui.SetupExpenseThresholdScreen(
+                onDone = {
+                    navController.navigate("home/$email") {
+                        popUpTo("setupExpenseThreshold/$email") { inclusive = true }
                     }
                 }
             )
@@ -287,8 +298,8 @@ fun HomeScreen(
     userEmail: String = "",
     sharedTransactionViewModel: TransactionViewModel
 ) {
-    val context = LocalContext.current
-    val database = remember { BilanceDatabase.getDatabase(context) }
+    val localContext = LocalContext.current
+    val database = remember { BilanceDatabase.getDatabase(localContext) }
 
     // Get real data from ViewModel
     val transactions by sharedTransactionViewModel.transactions.collectAsState()
@@ -312,7 +323,7 @@ fun HomeScreen(
             userName = user?.fullName?.split(" ")?.firstOrNull() ?: "User"
 
             // Get SMS notification count
-            val smsViewModel = SMSViewModel(context.contentResolver)
+            val smsViewModel = SMSViewModel(localContext.contentResolver)
             userNotificationCount = smsViewModel.notifications.size
         } catch (e: Exception) {
             userName = "User"
@@ -338,6 +349,67 @@ fun HomeScreen(
             .toList()
             .sortedByDescending { (_, amount: Double) -> amount }
             .take(4)
+    }
+
+    // Threshold Exceeded Notification Logic (additive)
+    val thresholdExceeded by sharedTransactionViewModel.thresholdExceeded.collectAsState()
+    var showThresholdDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val smsViewModel = remember { SMSViewModel(context.contentResolver) }
+
+    // Register callback for threshold exceeded (additive)
+    LaunchedEffect(Unit) {
+        sharedTransactionViewModel.onThresholdExceeded = {
+            // Show in-app dialog
+            showThresholdDialog = true
+            // Trigger system notification (with permission check for Android 13+)
+            val notificationManager = androidx.core.app.NotificationManagerCompat.from(context)
+            val channelId = "expense_threshold_channel"
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                val channel = android.app.NotificationChannel(
+                    channelId,
+                    "Expense Threshold Alerts",
+                    android.app.NotificationManager.IMPORTANCE_HIGH
+                )
+                notificationManager.createNotificationChannel(channel)
+            }
+            // Use an existing icon, e.g., ic_trending_up
+            val iconRes = R.drawable.ic_trending_up
+            val builder = androidx.core.app.NotificationCompat.Builder(context, channelId)
+                .setSmallIcon(iconRes)
+                .setContentTitle("Monthly Expense Limit Exceeded")
+                .setContentText("You have exceeded your monthly expense threshold value as per your plan.")
+                .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
+            // Android 13+ requires POST_NOTIFICATIONS permission
+            if (android.os.Build.VERSION.SDK_INT < 33 ||
+                androidx.core.content.ContextCompat.checkSelfPermission(
+                    context,
+                    android.Manifest.permission.POST_NOTIFICATIONS
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            ) {
+                notificationManager.notify(1001, builder.build())
+            }
+            // Add to notifications section (additive)
+            smsViewModel.addTransaction(
+                title = "Expense Limit Exceeded",
+                amount = "-",
+                category = "Alert",
+                type = "reminder"
+            )
+        }
+    }
+
+    if (thresholdExceeded && showThresholdDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showThresholdDialog = false },
+            title = { androidx.compose.material3.Text("Monthly Expense Limit Exceeded") },
+            text = { androidx.compose.material3.Text("You have exceeded your monthly expense threshold value as per your plan. This may affect your savings.") },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { showThresholdDialog = false }) {
+                    androidx.compose.material3.Text("OK")
+                }
+            }
+        )
     }
 
     // Modern gradient background

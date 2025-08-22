@@ -144,7 +144,7 @@ fun NotificationScreen(
                         modifier = Modifier.size(20.dp)
                     )
                 }
-                
+
                 Text(
                     text = "Notifications",
                     color = com.example.bilance.ui.theme.TextOnPrimary,
@@ -152,7 +152,7 @@ fun NotificationScreen(
                     fontFamily = com.example.bilance.ui.theme.Poppins,
                     fontWeight = FontWeight.Bold
                 )
-                
+
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -191,7 +191,7 @@ fun NotificationScreen(
                     }
                 }
             }
-            
+
             // Modern card container
             androidx.compose.material3.Card(
                 modifier = Modifier
@@ -214,7 +214,7 @@ fun NotificationScreen(
                 } else {
                     viewModel.notifications
                 }
-                
+
                 val grouped = filteredNotifications
                     .groupBy { sms ->
                         val now = Calendar.getInstance()
@@ -267,28 +267,33 @@ fun NotificationScreen(
 
 @Composable
 fun NotificationCard(sms: TransactionSMS, onAccept: () -> Unit, onReject: () -> Unit, onClick: () -> Unit) {
-    // Determine notification type and icon based on SMS content
+    // State for marking as read (only for reminders)
+    var isRead by remember { mutableStateOf(sms.type == "reminder_read") }
     val (icon, iconColor, notificationType) = when {
         sms.message.lowercase().contains("transaction") -> Triple(
             Icons.Default.AttachMoney,
             Color(0xFF4A90E2),
             "Transactions"
         )
+
         sms.message.lowercase().contains("reminder") -> Triple(
             Icons.Default.NotificationImportant,
             Color(0xFF7B68EE),
             "Reminder!"
         )
+
         sms.message.lowercase().contains("update") -> Triple(
             Icons.Default.Update,
             Color(0xFF50C878),
             "New Update"
         )
+
         sms.message.lowercase().contains("payment") -> Triple(
             Icons.Default.Payment,
             Color(0xFF2D3748),
             "Payment Record"
         )
+
         else -> Triple(
             Icons.Default.Notifications,
             Color(0xFF4A90E2),
@@ -326,7 +331,6 @@ fun NotificationCard(sms: TransactionSMS, onAccept: () -> Unit, onReject: () -> 
                     modifier = Modifier.size(24.dp)
                 )
             }
-
             Spacer(modifier = Modifier.width(12.dp))
 
             // Content
@@ -355,7 +359,7 @@ fun NotificationCard(sms: TransactionSMS, onAccept: () -> Unit, onReject: () -> 
             }
         }
 
-        // Action buttons (keeping the original functionality)
+        // Action buttons
         if (sms.message.lowercase().contains("transaction")) {
             Row(
                 modifier = Modifier
@@ -388,6 +392,45 @@ fun NotificationCard(sms: TransactionSMS, onAccept: () -> Unit, onReject: () -> 
                     Text(
                         "Reject",
                         fontSize = 12.sp
+                    )
+                }
+            }
+        } else if (sms.type == "reminder" || sms.type == "reminder_read") {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onReject,
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Color(0xFFEF4444)
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        "Delete",
+                        fontSize = 12.sp
+                    )
+                }
+                Button(
+                    onClick = {
+                        isRead = true
+                        sms.type = "reminder_read"
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF10B981)
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f),
+                    enabled = !isRead
+                ) {
+                    Text(
+                        if (isRead) "Marked as Read" else "Mark as Read",
+                        fontSize = 12.sp,
+                        color = Color.White
                     )
                 }
             }

@@ -299,6 +299,71 @@ fun ProfileMenuItem(
 fun SettingsScreen(navController: NavController? = null) {
     val context = LocalContext.current
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showThresholdDialog by remember { mutableStateOf(false) }
+    var showBalanceDialog by remember { mutableStateOf(false) }
+    var thresholdText by remember { mutableStateOf("") }
+    var balanceText by remember { mutableStateOf("") }
+    val currentThreshold = UserPreferences.getMonthlyExpenseThreshold()
+    val currentBalance = UserPreferences.getInitialBalance()
+    if (showThresholdDialog) {
+        AlertDialog(
+            onDismissRequest = { showThresholdDialog = false },
+            title = { Text("Update Monthly Expense Limit") },
+            text = {
+                Column {
+                    Text("Current: ₹%.2f".format(currentThreshold))
+                    OutlinedTextField(
+                        value = thresholdText,
+                        onValueChange = { if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*$"))) thresholdText = it },
+                        label = { Text("New Limit") },
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val value = thresholdText.toDoubleOrNull()
+                        if (value != null) UserPreferences.setMonthlyExpenseThreshold(value)
+                        showThresholdDialog = false
+                    }
+                ) { Text("Save") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showThresholdDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (showBalanceDialog) {
+        AlertDialog(
+            onDismissRequest = { showBalanceDialog = false },
+            title = { Text("Update Current Account Balance") },
+            text = {
+                Column {
+                    Text("Current: ₹%.2f".format(currentBalance))
+                    OutlinedTextField(
+                        value = balanceText,
+                        onValueChange = { if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*$"))) balanceText = it },
+                        label = { Text("New Balance") },
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val value = balanceText.toDoubleOrNull()
+                        if (value != null) UserPreferences.setInitialBalance(value)
+                        showBalanceDialog = false
+                    }
+                ) { Text("Save") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBalanceDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
     
     if (showDeleteDialog) {
         AlertDialog(
@@ -387,6 +452,22 @@ fun SettingsScreen(navController: NavController? = null) {
                     modifier = Modifier.padding(bottom = 20.dp)
                 )
                 
+                // Update Monthly Expense Limit
+                ProfileMenuItem(
+                    icon = R.drawable.ic_editprofile,
+                    title = "Update Monthly Expense Limit",
+                    iconColor = Purple80.copy(alpha = 0.5f),
+                    onClick = { showThresholdDialog = true }
+                )
+
+                // Update Current Account Balance
+                ProfileMenuItem(
+                    icon = R.drawable.ic_salary,
+                    title = "Update Current Account Balance",
+                    iconColor = Purple80.copy(alpha = 0.5f),
+                    onClick = { showBalanceDialog = true }
+                )
+
                 // App Version
                 ProfileMenuItem(
                     icon = R.drawable.ic_help,
@@ -394,7 +475,7 @@ fun SettingsScreen(navController: NavController? = null) {
                     iconColor = Purple80.copy(alpha = 0.3f),
                     onClick = { navController?.navigate("app_version") }
                 )
-                
+
                 // Privacy Policy
                 ProfileMenuItem(
                     icon = R.drawable.ic_security,
@@ -402,7 +483,7 @@ fun SettingsScreen(navController: NavController? = null) {
                     iconColor = Purple80.copy(alpha = 0.5f),
                     onClick = { navController?.navigate("privacy_policy") }
                 )
-                
+
                 // About
                 ProfileMenuItem(
                     icon = R.drawable.ic_help,
@@ -410,7 +491,7 @@ fun SettingsScreen(navController: NavController? = null) {
                     iconColor = Purple80.copy(alpha = 0.7f),
                     onClick = { navController?.navigate("about_bilance") }
                 )
-                
+
                 Spacer(modifier = Modifier.height(32.dp))
                 
                 Text(
