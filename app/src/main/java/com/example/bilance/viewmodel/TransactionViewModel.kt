@@ -13,6 +13,12 @@ import kotlinx.coroutines.launch
 import java.util.*
 
 class TransactionViewModel(private val database: BilanceDatabase) : ViewModel() {
+    // State to track if threshold exceeded
+    private val _thresholdExceeded = MutableStateFlow(false)
+    val thresholdExceeded: StateFlow<Boolean> = _thresholdExceeded.asStateFlow()
+
+    // Callback to add a notification entry (to be set by UI layer)
+    var onThresholdExceeded: (() -> Unit)? = null
     
     private val _transactions = MutableStateFlow<List<Transaction>>(emptyList())
     val transactions: StateFlow<List<Transaction>> = _transactions.asStateFlow()
@@ -80,9 +86,9 @@ class TransactionViewModel(private val database: BilanceDatabase) : ViewModel() 
             val income = database.transactionDao().getTotalIncome(1) ?: 0.0
             val expense = database.transactionDao().getTotalExpense(1) ?: 0.0
             val initialBalance = UserPreferences.getInitialBalance()
-            
+
             println("DEBUG: loadSummaryData() - Income: $income, Expense: $expense")
-            
+
             _totalIncome.value = income
             _totalExpense.value = expense
             val available = initialBalance + income
@@ -90,6 +96,23 @@ class TransactionViewModel(private val database: BilanceDatabase) : ViewModel() 
 
             // Calculate expense percentage based on initial balance + total income
             _expensePercentage.value = if (available > 0) (expense / available) * 100 else 0.0
+
+            // Check threshold
+            val threshold = UserPreferences.getMonthlyExpenseThreshold()
+            val calendar = Calendar.getInstance()
+            val currentMonth = calendar.get(Calendar.MONTH)
+            val currentYear = calendar.get(Calendar.YEAR)
+            val monthExpenses = _transactions.value.filter {
+                val cal = Calendar.getInstance().apply { time = it.date }
+                cal.get(Calendar.MONTH) == currentMonth && cal.get(Calendar.YEAR) == currentYear && it.amountType == "expense"
+            }.sumOf { it.amount }
+            val exceeded = threshold > 0 && monthExpenses > threshold
+            if (exceeded && !_thresholdExceeded.value) {
+                _thresholdExceeded.value = true
+                onThresholdExceeded?.invoke()
+            } else if (!exceeded && _thresholdExceeded.value) {
+                _thresholdExceeded.value = false
+            }
         }
     }
     
