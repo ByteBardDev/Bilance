@@ -358,6 +358,13 @@ fun HomeScreen(
     val smsViewModel = remember { SMSViewModel(context.contentResolver) }
 
     // Register callback for threshold exceeded (additive)
+
+    // Register callback for repeated transaction auto-categorization (additive)
+    LaunchedEffect(Unit) {
+        sharedTransactionViewModel.onAutoCategorized = { recipient, category ->
+            smsViewModel.addAutoCategorizedNotification(recipient, category)
+        }
+    }
     LaunchedEffect(Unit) {
         sharedTransactionViewModel.onThresholdExceeded = {
             // Show in-app dialog

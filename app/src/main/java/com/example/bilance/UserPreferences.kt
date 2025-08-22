@@ -6,6 +6,40 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 
 object UserPreferences {
+    private const val KEY_CATEGORY_MAPPING = "category_mapping_v1"
+    /**
+     * Save a mapping from sender/receiver to category for auto-categorization.
+     */
+    fun saveCategoryMapping(senderOrReceiver: String, category: String) {
+        val ctx = requireContext()
+        val map = getCategoryMapping().toMutableMap()
+        map[senderOrReceiver] = category
+        val serialized = map.entries.joinToString("||") { "${it.key}::${it.value}" }
+        prefs(ctx).edit().putString(KEY_CATEGORY_MAPPING, serialized).apply()
+    }
+
+    /**
+     * Retrieve the mapping from sender/receiver to category.
+     */
+    fun getCategoryMapping(): Map<String, String> {
+        val ctx = requireContext()
+        val serialized = prefs(ctx).getString(KEY_CATEGORY_MAPPING, null) ?: return emptyMap()
+        return serialized.split("||").mapNotNull {
+            val parts = it.split("::")
+            if (parts.size == 2) parts[0] to parts[1] else null
+        }.toMap()
+    }
+
+    /**
+     * Remove a mapping (if user changes category for a sender/receiver).
+     */
+    fun removeCategoryMapping(senderOrReceiver: String) {
+        val ctx = requireContext()
+        val map = getCategoryMapping().toMutableMap()
+        map.remove(senderOrReceiver)
+        val serialized = map.entries.joinToString("||") { "${it.key}::${it.value}" }
+        prefs(ctx).edit().putString(KEY_CATEGORY_MAPPING, serialized).apply()
+    }
     private const val PREFS_NAME = "bilance_prefs"
     private const val KEY_LOGGED_IN_EMAIL = "logged_in_email"
     private const val KEY_INITIAL_BALANCE = "initial_balance"

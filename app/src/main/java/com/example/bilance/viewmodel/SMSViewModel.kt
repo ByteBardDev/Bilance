@@ -13,6 +13,25 @@ class SMSViewModel(
     private val contentResolver: ContentResolver
 ) : ViewModel() {
 
+    // Add a notification for auto-categorized repeated transaction
+    fun addAutoCategorizedNotification(recipient: String, category: String) {
+        val newId = (notifications.maxByOrNull { it.id }?.id ?: 0) + 1
+        val sms = com.example.bilance.model.TransactionSMS(
+            id = newId,
+            smsId = "auto_${System.currentTimeMillis()}",
+            title = "Repeated Transaction",
+            message = "Repeated transaction from $recipient auto-categorized as $category.",
+            date = Date(),
+            category = category,
+            amount = "",
+            type = "auto_categorized",
+            recipient = recipient,
+            isAutoCategorized = true,
+            autoCategory = category
+        )
+        notifications.add(0, sms)
+    }
+
     val notifications = mutableStateListOf<TransactionSMS>()
     
     // Keep track of processed/deleted SMS IDs to avoid showing them again

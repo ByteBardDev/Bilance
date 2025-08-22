@@ -13,6 +13,8 @@ import kotlinx.coroutines.launch
 import java.util.*
 
 class TransactionViewModel(private val database: BilanceDatabase) : ViewModel() {
+    // Callback for repeated transaction auto-categorization notification
+    var onAutoCategorized: ((String, String) -> Unit)? = null // (sender/receiver, category)
     // State to track if threshold exceeded
     private val _thresholdExceeded = MutableStateFlow(false)
     val thresholdExceeded: StateFlow<Boolean> = _thresholdExceeded.asStateFlow()
@@ -127,6 +129,10 @@ class TransactionViewModel(private val database: BilanceDatabase) : ViewModel() 
     ) {
         viewModelScope.launch {
             try {
+                // Save mapping if recipientName is present and category is not Uncategorized
+                if (!recipientName.isNullOrBlank() && category != "Uncategorized") {
+                    UserPreferences.saveCategoryMapping(recipientName, category)
+                }
                 val transaction = Transaction(
                     title = title,
                     amount = amount,
@@ -140,11 +146,8 @@ class TransactionViewModel(private val database: BilanceDatabase) : ViewModel() 
                 )
                 println("DEBUG: Adding transaction: $title, amount: $amount, type: $amountType, category: $category")
                 println("DEBUG: Transaction object created: $transaction")
-                
                 val id = database.transactionDao().insertTransaction(transaction)
                 println("DEBUG: Transaction inserted with ID: $id")
-                
-                // The Flow should auto-update, and we'll also reload summary data
                 loadSummaryData()
                 println("DEBUG: Transaction added, waiting for Flow to update automatically")
             } catch (e: Exception) {
@@ -204,12 +207,23 @@ class TransactionViewModel(private val database: BilanceDatabase) : ViewModel() 
     ) {
         viewModelScope.launch {
             try {
+                // Auto-categorize if mapping exists
+                var categoryToUse = finalCategory
+                val recipient = smsTransaction.recipient
+                if (!recipient.isNullOrBlank()) {
+                    val mapping = UserPreferences.getCategoryMapping()
+                    val mappedCategory = mapping[recipient]
+                    if (!mappedCategory.isNullOrBlank()) {
+                        categoryToUse = mappedCategory
+                        // Notify UI layer for repeated transaction
+                        onAutoCategorized?.invoke(recipient, mappedCategory)
+                    }
+                }
                 // Extract numeric amount from string (remove ₹ and any formatting)
                 val cleanAmount = finalAmount.replace("₹", "").replace(",", "").trim()
                 val numericAmount = cleanAmount.toDoubleOrNull() ?: 0.0
-                
                 // Determine icon based on category
-                val iconName = when (finalCategory.lowercase()) {
+                val iconName = when (categoryToUse.lowercase()) {
                     "food", "food & dining" -> "food"
                     "groceries" -> "groceries"
                     "transport", "transportation" -> "transport"
@@ -218,27 +232,25 @@ class TransactionViewModel(private val database: BilanceDatabase) : ViewModel() 
                     "transfer" -> "transfer"
                     else -> "layers"
                 }
-                
                 val transaction = Transaction(
                     title = if (smsTransaction.title.isNotBlank()) smsTransaction.title else "SMS Transaction",
                     amount = numericAmount,
                     amountType = smsTransaction.type.ifEmpty { "expense" },
-                    category = finalCategory,
+                    category = categoryToUse,
                     date = smsTransaction.date,
                     time = getCurrentTime(),
                     iconName = iconName,
                     recipientName = smsTransaction.recipient,
                     userId = 1
                 )
-                
                 println("DEBUG: Converting SMS transaction to database transaction: $transaction")
-                
                 val id = database.transactionDao().insertTransaction(transaction)
                 println("DEBUG: SMS Transaction converted and inserted with ID: $id")
-                
-                // Reload summary data to reflect new transaction
+                // Save mapping if user manually categorized
+                if (!recipient.isNullOrBlank() && finalCategory != "Uncategorized") {
+                    UserPreferences.saveCategoryMapping(recipient, finalCategory)
+                }
                 loadSummaryData()
-                
             } catch (e: Exception) {
                 println("DEBUG: Error converting SMS transaction: ${e.message}")
                 e.printStackTrace()
