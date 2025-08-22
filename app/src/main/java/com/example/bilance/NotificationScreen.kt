@@ -246,6 +246,7 @@ fun NotificationScreen(
                         items(smsItems) { sms ->
                             NotificationCard(
                                 sms = sms,
+                                navController = navController,
                                 onAccept = {
                                     navController.navigate("transactionDetail/${sms.id}")
                                 },
@@ -266,7 +267,13 @@ fun NotificationScreen(
 }
 
 @Composable
-fun NotificationCard(sms: TransactionSMS, onAccept: () -> Unit, onReject: () -> Unit, onClick: () -> Unit) {
+fun NotificationCard(
+    sms: TransactionSMS,
+    navController: NavController,
+    onAccept: () -> Unit,
+    onReject: () -> Unit,
+    onClick: () -> Unit
+) {
     // State for marking as read (only for reminders)
     var isRead by remember { mutableStateOf(sms.type == "reminder_read") }
     val (icon, iconColor, notificationType) = when {
@@ -360,7 +367,45 @@ fun NotificationCard(sms: TransactionSMS, onAccept: () -> Unit, onReject: () -> 
         }
 
         // Action buttons
-        if (sms.message.lowercase().contains("transaction")) {
+        if (sms.isAutoCategorized) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Button(
+                    onClick = onAccept,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF10B981)
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        "Okay",
+                        fontSize = 12.sp,
+                        color = Color.White
+                    )
+                }
+                OutlinedButton(
+                    onClick = {
+                        // Navigate to TransactionDetailsScreen for this notification
+                        navController.navigate("transactionDetail/${sms.id}")
+                    },
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Color(0xFFEF4444)
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        "Change",
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        } else if (sms.message.lowercase().contains("transaction")) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

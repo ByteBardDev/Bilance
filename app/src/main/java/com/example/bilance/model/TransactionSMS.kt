@@ -11,5 +11,7 @@ data class TransactionSMS(
     var category: String = "",
     var amount: String = "",
     var type: String = "", // e.g., "transaction", "reminder"
-    var recipient: String? = null
+    var recipient: String? = null,
+    var isAutoCategorized: Boolean = false, // For repeated transaction notification
+    var autoCategory: String? = null // The auto-assigned category
 )
