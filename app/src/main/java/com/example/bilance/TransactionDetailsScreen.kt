@@ -60,9 +60,16 @@ fun TransactionDetailsScreen(
     }
 
     val categoryOptions = if (transactionType == "Income") {
-        listOf("Uncategorized", "Salary", "Business Income", "TA/DA", "Interest", "Gift", "Other Income")
+        listOf(
+            "Uncategorized", "Salary", "Business Income", "TA/DA", "Interest", "Gift", 
+            "Investment", "Bonus", "Commission", "Rental Income", "Other Income"
+        )
     } else {
-        listOf("Uncategorized", "Food", "Travel", "Shopping", "Groceries", "Bills", "Others")
+        listOf(
+            "Uncategorized", "Food", "Transport", "Groceries", "Rent", "Entertainment", 
+            "Bills", "Shopping", "Health", "Education", "Fitness", "Travel", 
+            "Medicine", "Credit Card", "Insurance", "Utilities", "Others"
+        )
     }
 
     var selectedCategory by remember { mutableStateOf(if (sms.category in categoryOptions) sms.category else "Uncategorized") }
