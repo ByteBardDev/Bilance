@@ -17,6 +17,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.filled.Home
@@ -963,6 +965,7 @@ fun AnalyticsScreen(sharedTransactionViewModel: TransactionViewModel) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 24.dp)
             ) {
                 Text(
@@ -1142,6 +1145,39 @@ fun AnalyticsScreen(sharedTransactionViewModel: TransactionViewModel) {
 
                 Spacer(modifier = Modifier.height(24.dp))
 
+                // Pie Chart for Category Breakdown
+                if (categoryBreakdown.isNotEmpty()) {
+                    Text(
+                        text = "Expense Distribution",
+                        color = TextPrimary,
+                        fontFamily = Poppins,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 18.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(250.dp),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = CardBackground
+                        ),
+                        elevation = CardDefaults.cardElevation(8.dp)
+                    ) {
+                        ExpensePieChart(
+                            categoryData = categoryBreakdown,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(16.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+
                 // Category breakdown with real data
                 if (categoryBreakdown.isNotEmpty()) {
                     Text(
@@ -1211,6 +1247,9 @@ fun AnalyticsScreen(sharedTransactionViewModel: TransactionViewModel) {
                         )
                     }
                 }
+                
+                // Add bottom padding for proper scrolling
+                Spacer(modifier = Modifier.height(100.dp))
             }
         }
     }
@@ -1676,6 +1715,166 @@ fun MainNavApp(
                 }
             }
             BottomNavBar(currentTab = currentTab, onTabSelected = { currentTab = it })
+        }
+    }
+}
+
+@Composable
+fun ExpensePieChart(
+    categoryData: List<CategoryAnalyticsData>,
+    modifier: Modifier = Modifier
+) {
+    // Calculate total for percentage calculation
+    val total = categoryData.sumOf { it.amount }
+    
+    if (total <= 0 || categoryData.isEmpty()) {
+        // Show empty state
+        Box(
+            modifier = modifier,
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "No expense data available",
+                color = TextSecondary,
+                fontFamily = Poppins,
+                fontSize = 14.sp
+            )
+        }
+        return
+    }
+    
+    // Vibrant and distinct color palette for pie chart
+    val colorPalette = listOf(
+        Color(0xFFFF6B6B), // Bright Red
+        Color(0xFF4ECDC4), // Teal
+        Color(0xFF45B7D1), // Sky Blue
+        Color(0xFF96CEB4), // Mint Green
+        Color(0xFFFECA57), // Yellow
+        Color(0xFFFF9FF3), // Pink
+        Color(0xFF54A0FF), // Blue
+        Color(0xFF5F27CD), // Purple
+        Color(0xFFFF9F43), // Orange
+        Color(0xFF00D2D3), // Cyan
+        Color(0xFFFF6348), // Coral
+        Color(0xFF2ED573), // Green
+        Color(0xFFFF4757), // Red-Pink
+        Color(0xFF3742FA), // Indigo
+        Color(0xFFFFDA79)  // Light Orange
+    )
+    
+    // Assign colors based on index to ensure each category gets a unique color
+    val colors = categoryData.mapIndexed { index, _ ->
+        colorPalette[index % colorPalette.size]
+    }
+
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Pie Chart
+        Box(
+            modifier = Modifier
+                .size(180.dp)
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            androidx.compose.foundation.Canvas(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                val radius = size.minDimension / 2
+                val center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2)
+                var startAngle = -90f // Start from top
+
+                categoryData.forEachIndexed { index, data ->
+                    val sweepAngle = (data.amount / total * 360).toFloat()
+                    
+                    // Only draw if the angle is meaningful
+                    if (sweepAngle > 1f) {
+                        drawArc(
+                            color = colors[index],
+                            startAngle = startAngle,
+                            sweepAngle = sweepAngle,
+                            useCenter = true,
+                            topLeft = androidx.compose.ui.geometry.Offset(
+                                center.x - radius,
+                                center.y - radius
+                            ),
+                            size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2)
+                        )
+                    }
+                    startAngle += sweepAngle
+                }
+                
+                // Draw center circle for donut effect
+                drawCircle(
+                    color = androidx.compose.ui.graphics.Color.White,
+                    radius = radius * 0.4f,
+                    center = center
+                )
+            }
+            
+            // Center text showing total
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Total",
+                    color = TextSecondary,
+                    fontSize = 12.sp,
+                    fontFamily = Poppins
+                )
+                Text(
+                    text = "₹${String.format("%,.0f", total)}",
+                    color = TextPrimary,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = Poppins
+                )
+            }
+        }
+
+        // Legend
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            categoryData.take(5).forEachIndexed { index, data ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(12.dp)
+                            .background(
+                                color = colors[index],
+                                shape = androidx.compose.foundation.shape.CircleShape
+                            )
+                    )
+                    
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = data.categoryName,
+                            color = TextPrimary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            fontFamily = Poppins,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = "${data.percentage}%",
+                            color = TextSecondary,
+                            fontSize = 10.sp,
+                            fontFamily = Poppins
+                        )
+                    }
+                }
+            }
         }
     }
 }
