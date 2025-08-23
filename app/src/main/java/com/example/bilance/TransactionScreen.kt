@@ -100,18 +100,6 @@ fun TransactionScreen(
     // SMS ViewModel for unprocessed transactions
     val smsViewModel = remember { SMSViewModel(context.contentResolver) }
     
-    val topCategories = remember(transactions) {
-        transactions
-            .filter { it.amountType == "expense" }
-            .groupBy { it.category }
-            .mapValues { (_, list: List<com.example.bilance.data.Transaction>) -> 
-                list.sumOf { transaction -> transaction.amount } 
-            }
-            .toList()
-            .sortedByDescending { (_, amount: Double) -> amount }
-            .take(3)
-    }
-    
     // Calculate transactions by month reactively
     val transactionsByMonth = remember(transactions) {
         println("DEBUG: TransactionScreen - Recalculating transactionsByMonth with ${transactions.size} transactions")
@@ -287,42 +275,6 @@ fun TransactionScreen(
                             }
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                    }
-                }
-            }
-
-            // Top categories (chips)
-            if (topCategories.isNotEmpty()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    topCategories.forEach { entry ->
-                        AssistChip(
-                            onClick = {},
-                            label = {
-                                Text(
-                                    "${entry.first} · ₹${String.format("%.0f", entry.second)}",
-                                    color = SurfaceWhite,
-                                    fontFamily = Poppins,
-                                    fontSize = 13.sp
-                                )
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_layers),
-                                    contentDescription = null,
-                                    tint = Purple80
-                                )
-                            },
-                            colors = AssistChipDefaults.assistChipColors(
-                                containerColor = Purple80.copy(alpha = 0.20f),
-                                labelColor = SurfaceWhite
-                            )
-                        )
                     }
                 }
             }

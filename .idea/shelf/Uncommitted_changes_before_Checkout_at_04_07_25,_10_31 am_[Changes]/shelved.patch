@@ -1,0 +1,314 @@
+Index: app/src/main/java/com/example/bilance/MainActivity.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>// File: MainActivity.kt\npackage com.example.bilance\nimport com.example.bilance.model.TransactionSMS\nimport android.Manifest\nimport android.content.pm.PackageManager\nimport android.os.Bundle\nimport androidx.activity.ComponentActivity\nimport androidx.activity.compose.setContent\nimport androidx.navigation.compose.NavHost\nimport androidx.navigation.compose.composable\nimport androidx.navigation.compose.rememberNavController\nimport androidx.activity.enableEdgeToEdge\nimport androidx.compose.foundation.Image\nimport androidx.navigation.NavController\nimport android.provider.Telephony\nimport androidx.compose.foundation.background\nimport androidx.compose.foundation.clickable\nimport androidx.compose.foundation.layout.*\nimport androidx.compose.foundation.shape.RoundedCornerShape\nimport androidx.compose.material3.*\nimport androidx.compose.runtime.*\nimport androidx.compose.foundation.layout.Arrangement\nimport androidx.compose.foundation.layout.Box\nimport androidx.compose.foundation.layout.Column\nimport androidx.compose.foundation.layout.Row\nimport androidx.compose.foundation.layout.fillMaxHeight\nimport androidx.compose.foundation.layout.fillMaxSize\nimport androidx.compose.foundation.layout.fillMaxWidth\nimport androidx.compose.foundation.layout.height\nimport androidx.compose.foundation.layout.offset\nimport androidx.compose.foundation.layout.padding\nimport androidx.compose.foundation.layout.size\nimport androidx.compose.foundation.layout.width\nimport androidx.compose.foundation.rememberScrollState\nimport androidx.compose.foundation.shape.RoundedCornerShape\nimport androidx.compose.foundation.verticalScroll\nimport androidx.compose.material3.Button\nimport androidx.compose.material3.ButtonDefaults\nimport androidx.compose.material3.OutlinedButton\nimport androidx.compose.material3.Text\nimport androidx.compose.runtime.Composable\nimport androidx.compose.runtime.LaunchedEffect\nimport androidx.compose.runtime.getValue\nimport androidx.compose.runtime.mutableStateOf\nimport androidx.compose.runtime.remember\nimport androidx.compose.runtime.setValue\nimport androidx.compose.ui.Alignment\nimport androidx.compose.ui.Modifier\nimport androidx.compose.ui.draw.clip\nimport androidx.compose.ui.draw.shadow\nimport androidx.compose.ui.graphics.Color\nimport androidx.compose.ui.platform.LocalContext\nimport androidx.compose.ui.res.painterResource\nimport androidx.compose.ui.text.font.FontWeight\nimport androidx.compose.ui.text.style.TextAlign\nimport androidx.compose.ui.text.style.TextDecoration\nimport androidx.compose.ui.tooling.preview.Preview\nimport androidx.compose.ui.unit.dp\nimport androidx.compose.ui.unit.sp\nimport androidx.core.app.ActivityCompat\nimport androidx.core.content.ContextCompat\nimport androidx.lifecycle.viewmodel.compose.viewModel\nimport com.example.bilance.data.BilanceDatabase\nimport com.example.bilance.data.DatabaseUtils\nimport com.example.bilance.NotificationScreen\nimport com.example.bilance.ui.theme.*\nimport com.example.bilance.viewmodel.TransactionViewModel\nimport com.example.bilance.viewmodel.TransactionViewModelFactory\nimport kotlinx.coroutines.delay\n\nclass MainActivity : ComponentActivity() {\n    override fun onCreate(savedInstanceState: Bundle?) {\n        super.onCreate(savedInstanceState)\n        enableEdgeToEdge()\n\n        // Request SMS permission\n        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) {\n            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_SMS), 1)\n        }\n\n        setContent {\n            BilanceTheme {\n                BilanceApp()\n            }\n        }\n    }\n}\n\n@Composable\nfun BilanceApp() {\n    var currentScreen by remember { mutableStateOf(\"splash\") }\n    var currentTab by remember { mutableStateOf(\"home\") }\n    val context = LocalContext.current\n    val database = remember { BilanceDatabase.getDatabase(context) }\n    val navController = rememberNavController()\n\n    LaunchedEffect(Unit) {\n        DatabaseUtils.createDemoUser(database)\n    }\n\n    NavHost(navController = navController, startDestination = \"splash\") {\n        composable(\"splash\") {\n            SplashScreen(navController = navController)\n        }\n        composable(\"launch\") {\n            LaunchScreen(\n                onLoginClick = { navController.navigate(\"login\") },\n                onSignUpClick = { navController.navigate(\"signup\") }\n            )\n        }\n        composable(\"login\") {\n            LoginScreen(\n                onLoginSuccess = { navController.navigate(\"notifications\") },\n                onSignUpClick = { navController.navigate(\"signup\") }\n            )\n        }\n        composable(\"signup\") {\n            SignUpScreen(\n                onSignUpSuccess = { navController.navigate(\"notifications\") },\n                onLoginClick = { navController.navigate(\"login\") }\n            )\n        }\n        composable(\"notifications\") {\n            val factory = remember { TransactionViewModelFactory(context.contentResolver) }\n            val viewModel: TransactionViewModel = viewModel(factory = factory)\n            NotificationScreen(\n                viewModel = viewModel,\n                navController = navController\n            )\n        }\n        composable(\"transactionDetail/{smsId}\") { backStackEntry ->\n            val smsId = backStackEntry.arguments?.getString(\"smsId\")?.toIntOrNull() ?: return@composable\n            val factory = remember { TransactionViewModelFactory(context.contentResolver) }\n            val viewModel: TransactionViewModel = viewModel(factory = factory)\n            TransactionDetailsScreen(smsId = smsId, viewModel = viewModel, navController = navController)\n        delay(3000) // Show splash for 3 seconds\n        currentScreen = \"launch\"\n    }\n    when (currentScreen) {\n        \"splash\" -> SplashScreen()\n        \"launch\" -> LaunchScreen(\n            onLoginClick = { currentScreen = \"login\" },\n            onSignUpClick = { currentScreen = \"signup\" }\n        )\n        \"login\" -> LoginScreen(\n            onLoginSuccess = { currentScreen = \"main\" },\n            onSignUpClick = { currentScreen = \"signup\" }\n        )\n        \"signup\" -> SignUpScreen(\n            onSignUpSuccess = { currentScreen = \"main\" },\n            onLoginClick = { currentScreen = \"login\" }\n        )\n        \"main\" -> MainNavApp(currentTab = currentTab, onTabSelected = { currentTab = it })\n    }\n}\n\n@Composable\nfun MainNavApp(currentTab: String, onTabSelected: (String) -> Unit) {\n    Box(modifier = Modifier.fillMaxSize()) {\n        Column(modifier = Modifier.fillMaxSize()) {\n            Box(modifier = Modifier.weight(1f)) {\n                when (currentTab) {\n                    \"home\" -> HomeScreen()\n                    \"transaction\" -> TransactionScreen()\n                }\n            }\n            BottomNavBar(currentTab = currentTab, onTabSelected = onTabSelected)\n        }\n    }\n}\n\n@Composable\nfun HomeScreen() {\n    Column(\n        modifier = Modifier.fillMaxSize(),\n        horizontalAlignment = Alignment.CenterHorizontally,\n        verticalArrangement = Arrangement.Center\n    ) {\n        Text(\"Welcome to Bilance!\", modifier = Modifier.padding(bottom = 16.dp))\n        // Add more home content here\n    }\n}\n\n@Composable\nfun BottomNavBar(currentTab: String, onTabSelected: (String) -> Unit) {\n    Box(\n        modifier = Modifier\n            .fillMaxWidth()\n            .height(80.dp)\n            .clip(RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp))\n            .background(Color(0xFFF1FFF3))\n    ) {\n        Row(\n            modifier = Modifier.fillMaxSize(),\n            horizontalArrangement = Arrangement.SpaceEvenly,\n            verticalAlignment = Alignment.CenterVertically\n        ) {\n            Text(\n                \"\uD83C\uDFE0\",\n                fontSize = 28.sp,\n                modifier = Modifier.clickable { onTabSelected(\"home\") },\n                color = if (currentTab == \"home\") SplashBackgroundBlue else LaunchTextDark\n            )\n            Text(\n                \"⇄\",\n                fontSize = 28.sp,\n                modifier = Modifier.clickable { onTabSelected(\"transaction\") },\n                color = if (currentTab == \"transaction\") SplashBackgroundBlue else LaunchTextDark\n            )\n        }\n    }\n}\n\n\n@Composable\nfun SplashScreen(navController: NavController) {\n    LaunchedEffect(Unit) {\n        delay(3000)\n        navController.navigate(\"launch\") {\n            popUpTo(\"splash\") { inclusive = true }\n        }\n    }\n    Box(\n        modifier = Modifier\n            .fillMaxSize()\n            .background(SplashBackgroundBlue)\n    ) {\n        repeat(3) {\n            Box(\n                modifier = Modifier\n                    .fillMaxSize()\n                    .background(SplashOverlayBlack)\n            )\n        }\n        Box(\n            modifier = Modifier\n                .width(336.dp)\n                .height(174.dp)\n                .offset(x = 38.dp, y = 307.dp),\n            contentAlignment = Alignment.Center\n        ) {\n            Image(\n                painter = painterResource(id = R.drawable.logo_white),\n                contentDescription = \"Bilance Logo\",\n                modifier = Modifier.fillMaxSize()\n            )\n        }\n    }\n}\n\n@Composable\nfun LaunchScreen(\n    onLoginClick: () -> Unit = {},\n    onSignUpClick: () -> Unit = {}\n) {\n    Box(\n        modifier = Modifier\n            .fillMaxSize()\n            .background(LaunchBackgroundLight)\n    ) {\n        Box(\n            modifier = Modifier\n                .width(335.dp)\n                .height(174.dp)\n                .offset(x = 38.dp, y = 307.dp),\n            contentAlignment = Alignment.Center\n        ) {\n            Image(\n                painter = painterResource(id = R.drawable.logo),\n                contentDescription = \"Bilance Logo\",\n                modifier = Modifier.fillMaxSize()\n            )\n        }\n\n        Text(\n            text = \"One App. All Your Transactions. Zero Noise.\",\n            color = LaunchTextDark,\n            fontSize = 12.sp,\n            fontWeight = FontWeight.Normal,\n            textAlign = TextAlign.Center,\n            modifier = Modifier\n                .width(268.dp)\n                .offset(x = 82.dp, y = 481.dp)\n        )\n\n        Button(\n            onClick = onLoginClick,\n            colors = ButtonDefaults.buttonColors(\n                containerColor = LaunchButtonBlue,\n                contentColor = LaunchTextLight\n            ),\n            shape = RoundedCornerShape(30.dp),\n            modifier = Modifier\n                .width(207.dp)\n                .height(45.dp)\n                .offset(x = 112.dp, y = 530.dp)\n        ) {\n            Text(\n                text = \"Log In\",\n                fontSize = 16.sp,\n                fontWeight = FontWeight.Medium\n            )\n        }\n\n        OutlinedButton(\n            onClick = onSignUpClick,\n            colors = ButtonDefaults.outlinedButtonColors(\n                containerColor = LaunchButtonLight,\n                contentColor = LaunchTextBlue\n            ),\n            shape = RoundedCornerShape(30.dp),\n            modifier = Modifier\n                .width(207.dp)\n                .height(45.dp)\n                .offset(x = 112.dp, y = 587.dp)\n        ) {\n            Text(\n                text = \"Sign Up\",\n                fontSize = 16.sp,\n                fontWeight = FontWeight.Medium\n            )\n        }\n\n        Text(\n            text = \"Forgot Password?\",\n            color = LaunchLinkText,\n            fontSize = 12.sp,\n            fontWeight = FontWeight.Normal,\n            textDecoration = TextDecoration.Underline,\n            textAlign = TextAlign.Center,\n            modifier = Modifier\n                .width(127.dp)\n                .offset(x = 152.dp, y = 644.dp)\n                .clickable { }\n        )\n    }\n}\n\n@Composable\nfun Greeting(name: String, modifier: Modifier = Modifier) {\n    Text(\n        text = \"Hello $name!\",\n        modifier = modifier\n    )\n}\n\n@Preview(showBackground = true)\n@Composable\nfun SplashScreenPreview() {\n    val navController = rememberNavController()\n    BilanceTheme {\n        SplashScreen(navController = navController)\n    }\n}\n\n@Preview(showBackground = true)\n@Composable\nfun TransactionPreview() {\n    BilanceTheme {\n        TransactionScreen()\n    }\n}\n\n@Preview(showBackground = true)\n@Composable\nfun LaunchScreenPreview() {\n    BilanceTheme {\n        LaunchScreen()\n    }\n}\n\n@Preview(showBackground = true)\n@Composable\nfun BilanceAppPreview() {\n    BilanceTheme {\n        BilanceApp()\n    }\n}\n\n@Preview(showBackground = true)\n@Composable\nfun LoginPreview() {\n    BilanceTheme {\n        LoginScreen()\n    }\n}\n\n@Preview(showBackground = true)\n@Composable\nfun GreetingPreview() {\n    BilanceTheme {\n        Greeting(\"Android\")\n    }\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/example/bilance/MainActivity.kt b/app/src/main/java/com/example/bilance/MainActivity.kt
+--- a/app/src/main/java/com/example/bilance/MainActivity.kt	(revision 3fed9e3e8feac4329a45f0e81653beae1a4e8b05)
++++ b/app/src/main/java/com/example/bilance/MainActivity.kt	(date 1751605076273)
+@@ -13,10 +13,12 @@
+ import androidx.compose.foundation.Image
+ import androidx.navigation.NavController
+ import android.provider.Telephony
++import android.window.SplashScreen
+ import androidx.compose.foundation.background
+ import androidx.compose.foundation.clickable
+ import androidx.compose.foundation.layout.*
+-import androidx.compose.foundation.shape.RoundedCornerShape
++import androidx.compose.material.icons.Icons
++import androidx.compose.material.icons.filled.*
+ import androidx.compose.material3.*
+ import androidx.compose.runtime.*
+ import androidx.compose.foundation.layout.Arrangement
+@@ -133,24 +135,7 @@
+             val factory = remember { TransactionViewModelFactory(context.contentResolver) }
+             val viewModel: TransactionViewModel = viewModel(factory = factory)
+             TransactionDetailsScreen(smsId = smsId, viewModel = viewModel, navController = navController)
+-        delay(3000) // Show splash for 3 seconds
+-        currentScreen = "launch"
+-    }
+-    when (currentScreen) {
+-        "splash" -> SplashScreen()
+-        "launch" -> LaunchScreen(
+-            onLoginClick = { currentScreen = "login" },
+-            onSignUpClick = { currentScreen = "signup" }
+-        )
+-        "login" -> LoginScreen(
+-            onLoginSuccess = { currentScreen = "main" },
+-            onSignUpClick = { currentScreen = "signup" }
+-        )
+-        "signup" -> SignUpScreen(
+-            onSignUpSuccess = { currentScreen = "main" },
+-            onLoginClick = { currentScreen = "login" }
+-        )
+-        "main" -> MainNavApp(currentTab = currentTab, onTabSelected = { currentTab = it })
++        }
+     }
+ }
+ 
+@@ -161,7 +146,10 @@
+             Box(modifier = Modifier.weight(1f)) {
+                 when (currentTab) {
+                     "home" -> HomeScreen()
++                    "analytics" -> AnalyticsScreen()
+                     "transaction" -> TransactionScreen()
++                    "categories" -> CategoriesScreen()
++                    "profile" -> ProfileScreen()
+                 }
+             }
+             BottomNavBar(currentTab = currentTab, onTabSelected = onTabSelected)
+@@ -169,6 +157,78 @@
+     }
+ }
+ 
++@Composable
++fun AnalyticsScreen() {
++    Column(
++        modifier = Modifier
++            .fillMaxSize()
++            .background(Color(0xFFF8F9FA))
++            .padding(16.dp),
++        horizontalAlignment = Alignment.CenterHorizontally,
++        verticalArrangement = Arrangement.Center
++    ) {
++        Text(
++            "Analytics Screen",
++            style = MaterialTheme.typography.headlineMedium,
++            color = Color(0xFF283A5F)
++        )
++        Text(
++            "View your spending analytics here",
++            style = MaterialTheme.typography.bodyMedium,
++            color = Color.Gray,
++            modifier = Modifier.padding(top = 8.dp)
++        )
++    }
++}
++
++@Composable
++fun CategoriesScreen() {
++    Column(
++        modifier = Modifier
++            .fillMaxSize()
++            .background(Color(0xFFF8F9FA))
++            .padding(16.dp),
++        horizontalAlignment = Alignment.CenterHorizontally,
++        verticalArrangement = Arrangement.Center
++    ) {
++        Text(
++            "Categories Screen",
++            style = MaterialTheme.typography.headlineMedium,
++            color = Color(0xFF283A5F)
++        )
++        Text(
++            "Manage your expense categories here",
++            style = MaterialTheme.typography.bodyMedium,
++            color = Color.Gray,
++            modifier = Modifier.padding(top = 8.dp)
++        )
++    }
++}
++
++@Composable
++fun ProfileScreen() {
++    Column(
++        modifier = Modifier
++            .fillMaxSize()
++            .background(Color(0xFFF8F9FA))
++            .padding(16.dp),
++        horizontalAlignment = Alignment.CenterHorizontally,
++        verticalArrangement = Arrangement.Center
++    ) {
++        Text(
++            "Profile Screen",
++            style = MaterialTheme.typography.headlineMedium,
++            color = Color(0xFF283A5F)
++        )
++        Text(
++            "Manage your profile settings here",
++            style = MaterialTheme.typography.bodyMedium,
++            color = Color.Gray,
++            modifier = Modifier.padding(top = 8.dp)
++        )
++    }
++}
++
+ @Composable
+ fun HomeScreen() {
+     Column(
+@@ -188,28 +248,76 @@
+             .fillMaxWidth()
+             .height(80.dp)
+             .clip(RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp))
+-            .background(Color(0xFFF1FFF3))
++            .background(Color(0xFFC8D5E8)) // Light blue-gray background
+     ) {
+         Row(
+             modifier = Modifier.fillMaxSize(),
+             horizontalArrangement = Arrangement.SpaceEvenly,
+             verticalAlignment = Alignment.CenterVertically
+         ) {
+-            Text(
+-                "🏠",
+-                fontSize = 28.sp,
+-                modifier = Modifier.clickable { onTabSelected("home") },
+-                color = if (currentTab == "home") SplashBackgroundBlue else LaunchTextDark
++            // Home Icon
++            NavBarItem(
++                icon = Icons.Default.Home,
++                isSelected = currentTab == "home",
++                onClick = { onTabSelected("home") }
++            )
++            
++            // Analytics Icon
++            NavBarItem(
++                icon = Icons.Default.Analytics,
++                isSelected = currentTab == "analytics",
++                onClick = { onTabSelected("analytics") }
++            )
++            
++            // Transaction Icon (arrows)
++            NavBarItem(
++                icon = Icons.Default.SwapHoriz,
++                isSelected = currentTab == "transaction",
++                onClick = { onTabSelected("transaction") }
++            )
++            
++            // Layers/Categories Icon
++            NavBarItem(
++                icon = Icons.Default.Layers,
++                isSelected = currentTab == "categories",
++                onClick = { onTabSelected("categories") }
+             )
+-            Text(
+-                "⇄",
+-                fontSize = 28.sp,
+-                modifier = Modifier.clickable { onTabSelected("transaction") },
+-                color = if (currentTab == "transaction") SplashBackgroundBlue else LaunchTextDark
++            
++            // Profile Icon
++            NavBarItem(
++                icon = Icons.Default.Person,
++                isSelected = currentTab == "profile",
++                onClick = { onTabSelected("profile") }
+             )
+         }
+     }
+ }
++
++@Composable
++fun NavBarItem(
++    icon: androidx.compose.ui.graphics.vector.ImageVector,
++    isSelected: Boolean,
++    onClick: () -> Unit
++) {
++    Box(
++        modifier = Modifier
++            .size(48.dp)
++            .clip(RoundedCornerShape(24.dp))
++            .background(
++                if (isSelected) Color(0xFF283A5F) // Dark blue for selected
++                else Color.Transparent
++            )
++            .clickable { onClick() },
++        contentAlignment = Alignment.Center
++    ) {
++        Icon(
++            imageVector = icon,
++            contentDescription = null,
++            tint = if (isSelected) Color.White else Color(0xFF283A5F),
++            modifier = Modifier.size(24.dp)
++        )
++    }
++}
+ 
+ 
+ @Composable
+@@ -388,7 +496,40 @@
+ @Preview(showBackground = true)
+ @Composable
+ fun GreetingPreview() {
++    var currentTab by remember { mutableStateOf("home") }
++    
+     BilanceTheme {
+-        Greeting("Android")
++        Box(modifier = Modifier.fillMaxSize()) {
++            Column(modifier = Modifier.fillMaxSize()) {
++                // Main content area
++                Box(
++                    modifier = Modifier
++                        .weight(1f)
++                        .fillMaxWidth()
++                        .background(Color(0xFFF8F9FA))
++                        .padding(16.dp),
++                    contentAlignment = Alignment.Center
++                ) {
++                    Column(
++                        horizontalAlignment = Alignment.CenterHorizontally,
++                        verticalArrangement = Arrangement.Center
++                    ) {
++                        Greeting("Android")
++                        Spacer(modifier = Modifier.height(16.dp))
++                        Text(
++                            text = "Current tab: $currentTab",
++                            style = MaterialTheme.typography.bodyMedium,
++                            color = Color.Gray
++                        )
++                    }
++                }
++                
++                // Bottom Navigation Bar
++                BottomNavBar(
++                    currentTab = currentTab,
++                    onTabSelected = { currentTab = it }
++                )
++            }
++        }
+     }
+ }
+Index: gradle/libs.versions.toml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>[versions]\nagp = \"8.9.1\"\nkotlin = \"2.0.21\"\ncoreKtx = \"1.16.0\"\njunit = \"4.13.2\"\njunitVersion = \"1.2.1\"\nespressoCore = \"3.6.1\"\nlifecycleRuntimeKtx = \"2.8.7\"\nactivityCompose = \"1.10.1\"\ncomposeBom = \"2024.09.00\"\nnavigationRuntimeAndroid = \"2.9.0\"\nnavigationComposeJvmstubs = \"2.9.0\"\n\n[libraries]\nandroidx-core-ktx = { group = \"androidx.core\", name = \"core-ktx\", version.ref = \"coreKtx\" }\njunit = { group = \"junit\", name = \"junit\", version.ref = \"junit\" }\nandroidx-junit = { group = \"androidx.test.ext\", name = \"junit\", version.ref = \"junitVersion\" }\nandroidx-espresso-core = { group = \"androidx.test.espresso\", name = \"espresso-core\", version.ref = \"espressoCore\" }\nandroidx-lifecycle-runtime-ktx = { group = \"androidx.lifecycle\", name = \"lifecycle-runtime-ktx\", version.ref = \"lifecycleRuntimeKtx\" }\nandroidx-activity-compose = { group = \"androidx.activity\", name = \"activity-compose\", version.ref = \"activityCompose\" }\nandroidx-compose-bom = { group = \"androidx.compose\", name = \"compose-bom\", version.ref = \"composeBom\" }\nandroidx-ui = { group = \"androidx.compose.ui\", name = \"ui\" }\nandroidx-ui-graphics = { group = \"androidx.compose.ui\", name = \"ui-graphics\" }\nandroidx-ui-tooling = { group = \"androidx.compose.ui\", name = \"ui-tooling\" }\nandroidx-ui-tooling-preview = { group = \"androidx.compose.ui\", name = \"ui-tooling-preview\" }\nandroidx-ui-test-manifest = { group = \"androidx.compose.ui\", name = \"ui-test-manifest\" }\nandroidx-ui-test-junit4 = { group = \"androidx.compose.ui\", name = \"ui-test-junit4\" }\nandroidx-material3 = { group = \"androidx.compose.material3\", name = \"material3\" }\nandroidx-navigation-runtime-android = { group = \"androidx.navigation\", name = \"navigation-runtime-android\", version.ref = \"navigationRuntimeAndroid\" }\nandroidx-navigation-compose-jvmstubs = { group = \"androidx.navigation\", name = \"navigation-compose-jvmstubs\", version.ref = \"navigationComposeJvmstubs\" }\n\n[plugins]\nandroid-application = { id = \"com.android.application\", version.ref = \"agp\" }\nkotlin-android = { id = \"org.jetbrains.kotlin.android\", version.ref = \"kotlin\" }\nkotlin-compose = { id = \"org.jetbrains.kotlin.plugin.compose\", version.ref = \"kotlin\" }\n\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/gradle/libs.versions.toml b/gradle/libs.versions.toml
+--- a/gradle/libs.versions.toml	(revision 3fed9e3e8feac4329a45f0e81653beae1a4e8b05)
++++ b/gradle/libs.versions.toml	(date 1751603684040)
+@@ -10,6 +10,7 @@
+ composeBom = "2024.09.00"
+ navigationRuntimeAndroid = "2.9.0"
+ navigationComposeJvmstubs = "2.9.0"
++navigationRuntimeAndroidVersion = "2.9.1"
+ 
+ [libraries]
+ androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+@@ -28,6 +29,7 @@
+ androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
+ androidx-navigation-runtime-android = { group = "androidx.navigation", name = "navigation-runtime-android", version.ref = "navigationRuntimeAndroid" }
+ androidx-navigation-compose-jvmstubs = { group = "androidx.navigation", name = "navigation-compose-jvmstubs", version.ref = "navigationComposeJvmstubs" }
++navigation-runtime-android = { group = "androidx.navigation", name = "navigation-runtime-android", version.ref = "navigationRuntimeAndroidVersion" }
+ 
+ [plugins]
+ android-application = { id = "com.android.application", version.ref = "agp" }
+Index: app/build.gradle.kts
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>plugins {\n    alias(libs.plugins.android.application)\n    alias(libs.plugins.kotlin.android)\n    alias(libs.plugins.kotlin.compose)\n    kotlin(\"kapt\")\n}\n\nandroid {\n    namespace = \"com.example.bilance\"\n    compileSdk = 35\n\n    defaultConfig {\n        applicationId = \"com.example.bilance\"\n        minSdk = 30\n        targetSdk = 35\n        versionCode = 1\n        versionName = \"1.0\"\n\n        testInstrumentationRunner = \"androidx.test.runner.AndroidJUnitRunner\"\n    }\n\n    buildTypes {\n        release {\n            isMinifyEnabled = false\n            proguardFiles(\n                getDefaultProguardFile(\"proguard-android-optimize.txt\"),\n                \"proguard-rules.pro\"\n            )\n        }\n    }\n    compileOptions {\n        sourceCompatibility = JavaVersion.VERSION_11\n        targetCompatibility = JavaVersion.VERSION_11\n    }\n    kotlinOptions {\n        jvmTarget = \"11\"\n    }\n    buildFeatures {\n        compose = true\n    }\n}\n\ndependencies {\n\n    implementation(libs.androidx.core.ktx)\n    implementation(libs.androidx.lifecycle.runtime.ktx)\n    implementation(libs.androidx.activity.compose)\n    implementation(platform(libs.androidx.compose.bom))\n    implementation(libs.androidx.ui)\n    implementation(libs.androidx.ui.graphics)\n    implementation(libs.androidx.ui.tooling.preview)\n    implementation(libs.androidx.material3)\n    implementation(\"androidx.navigation:navigation-compose:2.7.5\")\n\n\n    // SQLite Database\n    implementation(\"androidx.room:room-runtime:2.6.1\")\n    implementation(\"androidx.room:room-ktx:2.6.1\")\n    //implementation(libs.androidx.navigation.runtime.android)\n    //implementation(libs.androidx.navigation.compose.jvmstubs)\n    kapt(\"androidx.room:room-compiler:2.6.1\")\n    \n    // ViewModel and Coroutines\n    implementation(\"androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0\")\n    implementation(\"org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3\")\n    \n    // Material Icons\n    implementation(\"androidx.compose.material:material-icons-extended:1.6.0\")\n    \n    testImplementation(libs.junit)\n    androidTestImplementation(libs.androidx.junit)\n    androidTestImplementation(libs.androidx.espresso.core)\n    androidTestImplementation(platform(libs.androidx.compose.bom))\n    androidTestImplementation(libs.androidx.ui.test.junit4)\n    debugImplementation(libs.androidx.ui.tooling)\n    debugImplementation(libs.androidx.ui.test.manifest)\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/build.gradle.kts b/app/build.gradle.kts
+--- a/app/build.gradle.kts	(revision 3fed9e3e8feac4329a45f0e81653beae1a4e8b05)
++++ b/app/build.gradle.kts	(date 1751603684065)
+@@ -56,6 +56,7 @@
+     // SQLite Database
+     implementation("androidx.room:room-runtime:2.6.1")
+     implementation("androidx.room:room-ktx:2.6.1")
++    implementation(libs.navigation.runtime.android)
+     //implementation(libs.androidx.navigation.runtime.android)
+     //implementation(libs.androidx.navigation.compose.jvmstubs)
+     kapt("androidx.room:room-compiler:2.6.1")
