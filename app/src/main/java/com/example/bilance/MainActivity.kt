@@ -730,13 +730,22 @@ fun HomeCategoryItem(
 ) {
     val percentage = if (totalExpense > 0) ((amount / totalExpense) * 100).toInt() else 0
 
-    val iconRes = when (categoryName.lowercase()) {
-        "food", "food & dining" -> R.drawable.ic_food
-        "groceries" -> R.drawable.ic_groceries
-        "transport", "transportation" -> R.drawable.ic_transport
-        "rent" -> R.drawable.ic_rent
-        "salary" -> R.drawable.ic_salary
-        else -> R.drawable.ic_layers
+    val (icon, iconColor) = when (categoryName.lowercase()) {
+        "food", "food & dining", "restaurant" -> Pair(Icons.Default.Restaurant, Color(0xFF6CB5FD))
+        "transport", "transportation", "travel" -> Pair(Icons.Default.DirectionsCar, Color(0xFF84CC16))
+        "groceries", "shopping" -> Pair(Icons.Default.LocalGroceryStore, Color(0xFF7BB3FF))
+        "rent", "housing", "home" -> Pair(Icons.Default.Home, Color(0xFFEF4444))
+        "entertainment", "movies", "games" -> Pair(Icons.Default.Movie, Color(0xFFEC4899))
+        "salary", "income", "earnings" -> Pair(Icons.Default.AccountBalance, Color(0xFF10B981))
+        "transfer", "banking" -> Pair(Icons.Default.SwapHoriz, Color(0xFF06B6D4))
+        "medicine", "medical", "health", "healthcare" -> Pair(Icons.Default.LocalHospital, Color(0xFFF59E0B))
+        "savings", "investment" -> Pair(Icons.Default.Savings, Color(0xFFC8E6C9))
+        "bills", "utilities" -> Pair(Icons.Default.AttachMoney, Color(0xFF8B5CF6))
+        "education", "school", "tuition" -> Pair(Icons.Default.School, Color(0xFF3B82F6))
+        "fitness", "gym", "sports" -> Pair(Icons.Default.FitnessCenter, Color(0xFF10B981))
+        "travel", "vacation", "flight" -> Pair(Icons.Default.Flight, Color(0xFFF59E0B))
+        "credit card", "card payment" -> Pair(Icons.Default.CreditCard, Color(0xFFEF4444))
+        else -> Pair(Icons.Default.Category, Color(0xFF9CA3AF))
     }
 
     Card(
@@ -757,13 +766,13 @@ fun HomeCategoryItem(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(AccentOrange.copy(alpha = 0.15f)),
+                    .background(iconColor.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    painter = painterResource(id = iconRes),
+                    imageVector = icon,
                     contentDescription = categoryName,
-                    tint = AccentOrange,
+                    tint = iconColor,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -1151,29 +1160,30 @@ fun AnalyticsScreen(sharedTransactionViewModel: TransactionViewModel) {
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         categoryBreakdown.forEach { categoryData ->
-                            val iconRes = when (categoryData.categoryName.lowercase()) {
-                                "food", "food & dining" -> R.drawable.ic_food
-                                "groceries" -> R.drawable.ic_groceries
-                                "transport", "transportation" -> R.drawable.ic_transport
-                                "rent" -> R.drawable.ic_rent
-                                "salary" -> R.drawable.ic_salary
-                                else -> R.drawable.ic_layers
-                            }
-
-                            val color = when (categoryData.categoryName.lowercase()) {
-                                "food", "food & dining" -> AccentOrange
-                                "transport", "transportation" -> PrimaryBlue
-                                "groceries" -> SecondaryPurple
-                                "rent" -> AccentRed
-                                else -> AccentGreen
+                            val (icon, iconColor) = when (categoryData.categoryName.lowercase()) {
+                                "food", "food & dining", "restaurant" -> Pair(Icons.Default.Restaurant, Color(0xFF6CB5FD))
+                                "transport", "transportation", "travel" -> Pair(Icons.Default.DirectionsCar, Color(0xFF84CC16))
+                                "groceries", "shopping" -> Pair(Icons.Default.LocalGroceryStore, Color(0xFF7BB3FF))
+                                "rent", "housing", "home" -> Pair(Icons.Default.Home, Color(0xFFEF4444))
+                                "entertainment", "movies", "games" -> Pair(Icons.Default.Movie, Color(0xFFEC4899))
+                                "salary", "income", "earnings" -> Pair(Icons.Default.AccountBalance, Color(0xFF10B981))
+                                "transfer", "banking" -> Pair(Icons.Default.SwapHoriz, Color(0xFF06B6D4))
+                                "medicine", "medical", "health", "healthcare" -> Pair(Icons.Default.LocalHospital, Color(0xFFF59E0B))
+                                "savings", "investment" -> Pair(Icons.Default.Savings, Color(0xFFC8E6C9))
+                                "bills", "utilities" -> Pair(Icons.Default.AttachMoney, Color(0xFF8B5CF6))
+                                "education", "school", "tuition" -> Pair(Icons.Default.School, Color(0xFF3B82F6))
+                                "fitness", "gym", "sports" -> Pair(Icons.Default.FitnessCenter, Color(0xFF10B981))
+                                "travel", "vacation", "flight" -> Pair(Icons.Default.Flight, Color(0xFFF59E0B))
+                                "credit card", "card payment" -> Pair(Icons.Default.CreditCard, Color(0xFFEF4444))
+                                else -> Pair(Icons.Default.Category, Color(0xFF9CA3AF))
                             }
 
                             CategoryAnalyticsItem(
                                 categoryName = categoryData.categoryName,
                                 amount = "₹${String.format("%,.0f", categoryData.amount)}",
                                 percentage = categoryData.percentage,
-                                color = color,
-                                iconRes = iconRes
+                                icon = icon,
+                                iconColor = iconColor
                             )
                         }
                     }
@@ -1211,8 +1221,8 @@ fun CategoryAnalyticsItem(
     categoryName: String,
     amount: String,
     percentage: Int,
-    color: Color,
-    iconRes: Int
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconColor: Color
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1232,13 +1242,13 @@ fun CategoryAnalyticsItem(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(color.copy(alpha = 0.15f)),
+                    .background(iconColor.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    painter = painterResource(id = iconRes),
+                    imageVector = icon,
                     contentDescription = categoryName,
-                    tint = color,
+                    tint = iconColor,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -1270,7 +1280,7 @@ fun CategoryAnalyticsItem(
                             .fillMaxWidth(percentage / 100f)
                             .fillMaxHeight()
                             .clip(RoundedCornerShape(3.dp))
-                            .background(color)
+                            .background(iconColor)
                     )
                 }
             }
